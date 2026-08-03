@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#060d18">
+  <meta name="color-scheme" content="dark">
   <meta name="format-detection" content="telephone=no">
   <title>Koch Snowflake</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,11 +16,15 @@
     html {
       height: 100%;
       height: -webkit-fill-available;
+      color-scheme: dark;
+      background: #060d18;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
     body {
-      background: radial-gradient(ellipse at 50% 30%, #1a3050 0%, #0a1628 55%, #060d18 100%);
-      background-attachment: fixed;
+      background-color: #060d18;
+      background-image: radial-gradient(ellipse at 50% 30%, #1a3050 0%, #0a1628 55%, #060d18 100%);
+      background-repeat: no-repeat;
+      background-size: cover;
       min-height: 100%;
       min-height: 100dvh;
       min-height: -webkit-fill-available;
@@ -30,10 +35,18 @@
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
     }
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      background: #060d18;
+      z-index: 0;
+      pointer-events: none;
+    }
     canvas {
       position: fixed;
       left: 0;
       top: 0;
+      z-index: 1;
       display: block;
       width: 100%;
       height: 100%;
@@ -44,9 +57,10 @@
       position: fixed;
       left: 50%;
       transform: translateX(-50%);
-      bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+      z-index: 3;
+      bottom: calc(8px + var(--ui-bottom-gap, 0px) + env(safe-area-inset-bottom, 0px));
       color: rgba(200, 220, 255, 0.4);
-      font-size: 14px;
+      font-size: 13px;
       letter-spacing: 0.5px;
       user-select: none;
       -webkit-user-select: none;
@@ -56,9 +70,10 @@
     }
     .controls {
       position: fixed;
-      bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+      bottom: calc(32px + var(--ui-bottom-gap, 0px) + env(safe-area-inset-bottom, 0px));
       left: 50%;
       transform: translateX(-50%);
+      z-index: 3;
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
@@ -78,6 +93,23 @@
       user-select: none;
       -webkit-user-select: none;
       touch-action: manipulation;
+    }
+    body.landscape-compact .hint {
+      display: none;
+    }
+    body.landscape-compact .controls {
+      flex-wrap: nowrap;
+      gap: 8px 12px;
+      padding: 6px 12px;
+      padding-left: calc(12px + env(safe-area-inset-left, 0px));
+      padding-right: calc(12px + env(safe-area-inset-right, 0px));
+      bottom: calc(6px + var(--ui-bottom-gap, 0px) + env(safe-area-inset-bottom, 0px));
+      font-size: 12px;
+      border-radius: 8px;
+      max-width: calc(100vw - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+    }
+    body.landscape-compact .controls input[type="range"] {
+      width: min(120px, 28vw);
     }
     .controls .control-group {
       display: flex;
@@ -103,6 +135,7 @@
   </style>
 </head>
 <body>
+  <div class="backdrop" aria-hidden="true"></div>
   <canvas id="canvas"></canvas>
   <div class="controls" id="controls">
     <div class="control-group">
@@ -136,30 +169,36 @@
     let viewWidth = window.innerWidth;
     let viewHeight = window.innerHeight;
 
-    function getViewportSize() {
+    function isLandscapeCompact() {
+      return window.matchMedia('(orientation: landscape) and (max-height: 500px)').matches;
+    }
+
+    /** iOS Safari：按可视区域底部对齐固定 UI，避免控件浮到屏幕中间 */
+    function layoutUiChrome() {
       const vv = window.visualViewport;
-      return {
-        width: vv ? vv.width : window.innerWidth,
-        height: vv ? vv.height : window.innerHeight,
-        offsetTop: vv ? vv.offsetTop : 0,
-        offsetLeft: vv ? vv.offsetLeft : 0,
-      };
+      const bottomGap = vv
+        ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+        : 0;
+      const landscape = isLandscapeCompact();
+
+      document.body.classList.toggle('landscape-compact', landscape);
+      document.documentElement.style.setProperty('--ui-bottom-gap', `${bottomGap}px`);
     }
 
     function resize() {
-      const { width, height, offsetTop, offsetLeft } = getViewportSize();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-      viewWidth = width;
-      viewHeight = height;
+      viewWidth = window.innerWidth;
+      viewHeight = window.innerHeight;
 
-      canvas.width = Math.max(1, Math.round(width * dpr));
-      canvas.height = Math.max(1, Math.round(height * dpr));
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      canvas.style.transform = `translate(${offsetLeft}px, ${offsetTop}px)`;
+      canvas.width = Math.max(1, Math.round(viewWidth * dpr));
+      canvas.height = Math.max(1, Math.round(viewHeight * dpr));
+      canvas.style.width = `${viewWidth}px`;
+      canvas.style.height = `${viewHeight}px`;
+      canvas.style.transform = '';
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      layoutUiChrome();
     }
     resize();
     window.addEventListener('resize', () => {
@@ -172,17 +211,14 @@
         resize();
         initDistantSnow();
         regenerate();
-      }, 200);
+      }, 250);
     });
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', () => {
         resize();
         initDistantSnow();
       });
-      window.visualViewport.addEventListener('scroll', () => {
-        const { offsetTop, offsetLeft } = getViewportSize();
-        canvas.style.transform = `translate(${offsetLeft}px, ${offsetTop}px)`;
-      });
+      window.visualViewport.addEventListener('scroll', layoutUiChrome);
     }
 
     function rand(min, max, rng) {
@@ -616,8 +652,21 @@
       });
     }
 
+    function drawSceneBackground() {
+      const cx = viewWidth * 0.5;
+      const cy = viewHeight * 0.3;
+      const r = Math.max(viewWidth, viewHeight);
+      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      bg.addColorStop(0, '#1a3050');
+      bg.addColorStop(0.55, '#0a1628');
+      bg.addColorStop(1, '#060d18');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, viewWidth, viewHeight);
+    }
+
     function draw() {
       ctx.clearRect(0, 0, viewWidth, viewHeight);
+      drawSceneBackground();
       drawDistantSnow();
       for (let i = 0; i < snowflakes.length; i++) {
         drawSnowflake(snowflakes[i]);
@@ -673,6 +722,14 @@
       }
       regenerate();
     });
+
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
+      document.addEventListener(type, (e) => e.preventDefault());
+    });
+    document.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 1) e.preventDefault();
+    }, { passive: false });
+
     initDistantSnow();
     regenerate();
     requestAnimationFrame(animate);
