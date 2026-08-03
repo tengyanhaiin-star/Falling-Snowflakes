@@ -18,6 +18,7 @@
       height: -webkit-fill-available;
       color-scheme: dark;
       background: #060d18;
+      touch-action: none;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
     body {
@@ -33,7 +34,7 @@
       overscroll-behavior: none;
       -webkit-overflow-scrolling: touch;
       -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
+      touch-action: none;
     }
     .backdrop {
       position: fixed;
@@ -51,7 +52,7 @@
       width: 100%;
       height: 100%;
       cursor: pointer;
-      touch-action: manipulation;
+      touch-action: none;
     }
     .hint {
       position: fixed;
@@ -59,9 +60,13 @@
       transform: translateX(-50%);
       z-index: 3;
       bottom: calc(8px + var(--ui-bottom-gap, 0px) + env(safe-area-inset-bottom, 0px));
+      width: max-content;
+      max-width: calc(100vw - 32px);
       color: rgba(200, 220, 255, 0.4);
-      font-size: 13px;
-      letter-spacing: 0.5px;
+      font-size: clamp(11px, 3.1vw, 13px);
+      letter-spacing: 0.2px;
+      line-height: 1;
+      white-space: nowrap;
       user-select: none;
       -webkit-user-select: none;
       pointer-events: none;
@@ -92,7 +97,7 @@
       font-size: 14px;
       user-select: none;
       -webkit-user-select: none;
-      touch-action: manipulation;
+      touch-action: none;
     }
     body.landscape-compact .hint {
       display: none;
@@ -123,7 +128,7 @@
       width: min(160px, 36vw);
       accent-color: #a8d4ff;
       cursor: pointer;
-      touch-action: manipulation;
+      touch-action: pan-x;
     }
     .controls #countValue,
     .controls #speedValue {
@@ -707,7 +712,18 @@
 
     controls.addEventListener('click', (e) => e.stopPropagation());
     controls.addEventListener('mousedown', (e) => e.stopPropagation());
-    controls.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+
+    function blockPinchZoom(e) {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    }
+
+    controls.addEventListener('touchstart', (e) => {
+      blockPinchZoom(e);
+      e.stopPropagation();
+    }, { passive: false });
+    controls.addEventListener('touchmove', blockPinchZoom, { passive: false });
 
     let suppressNextClick = false;
     canvas.addEventListener('touchend', (e) => {
@@ -724,11 +740,10 @@
     });
 
     ['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
-      document.addEventListener(type, (e) => e.preventDefault());
+      document.addEventListener(type, (e) => e.preventDefault(), { capture: true });
     });
-    document.addEventListener('touchmove', (e) => {
-      if (e.touches.length > 1) e.preventDefault();
-    }, { passive: false });
+    document.addEventListener('touchstart', blockPinchZoom, { passive: false, capture: true });
+    document.addEventListener('touchmove', blockPinchZoom, { passive: false, capture: true });
 
     initDistantSnow();
     regenerate();
