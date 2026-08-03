@@ -150,7 +150,7 @@
     </div>
     <div class="control-group">
       <label for="speedSlider">Fall speed</label>
-      <input type="range" id="speedSlider" min="2" max="20" step="1" value="10">
+      <input type="range" id="speedSlider" min="4" max="20" step="1" value="10">
       <span id="speedValue">1.0×</span>
     </div>
   </div>
@@ -729,6 +729,7 @@
     canvas.addEventListener('touchend', (e) => {
       if (e.target !== canvas) return;
       suppressNextClick = true;
+      initDistantSnow();
       regenerate();
     }, { passive: true });
     canvas.addEventListener('click', () => {
@@ -736,6 +737,7 @@
         suppressNextClick = false;
         return;
       }
+      initDistantSnow();
       regenerate();
     });
 
