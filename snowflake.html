@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#060d18">
+  <meta name="format-detection" content="telephone=no">
+  <title>Koch Snowflake</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400&display=swap" rel="stylesheet">
+  <style>
+    html {
+      height: 100%;
+      height: -webkit-fill-available;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
+    body {
+      background: radial-gradient(ellipse at 50% 30%, #1a3050 0%, #0a1628 55%, #060d18 100%);
+      background-attachment: fixed;
+      min-height: 100%;
+      min-height: 100dvh;
+      min-height: -webkit-fill-available;
+      width: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-overflow-scrolling: touch;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    canvas {
+      position: fixed;
+      left: 0;
+      top: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .hint {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+      color: rgba(200, 220, 255, 0.4);
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      user-select: none;
+      -webkit-user-select: none;
+      pointer-events: none;
+      padding: 0 16px;
+      text-align: center;
+    }
+    .controls {
+      position: fixed;
+      bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 10px 16px;
+      max-width: min(calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), 560px);
+      padding: 10px 18px;
+      padding-left: calc(18px + env(safe-area-inset-left, 0px));
+      padding-right: calc(18px + env(safe-area-inset-right, 0px));
+      background: rgba(10, 22, 40, 0.75);
+      border: 1px solid rgba(160, 200, 255, 0.18);
+      border-radius: 10px;
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
+      color: rgba(210, 225, 245, 0.85);
+      font-size: 14px;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    .controls .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .controls label {
+      white-space: nowrap;
+    }
+    .controls input[type="range"] {
+      width: min(160px, 36vw);
+      accent-color: #a8d4ff;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .controls #countValue,
+    .controls #speedValue {
+      min-width: 1.2em;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      color: #cce8ff;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div class="controls" id="controls">
+    <div class="control-group">
+      <label for="countSlider">Snowflake count</label>
+      <input type="range" id="countSlider" min="4" max="28" step="1" value="12">
+      <span id="countValue">12</span>
+    </div>
+    <div class="control-group">
+      <label for="speedSlider">Fall speed</label>
+      <input type="range" id="speedSlider" min="2" max="20" step="1" value="10">
+      <span id="speedValue">1.0×</span>
+    </div>
+  </div>
+  <p class="hint">Tap the canvas to regenerate</p>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const countSlider = document.getElementById('countSlider');
+    const countValue = document.getElementById('countValue');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedValue = document.getElementById('speedValue');
+    const controls = document.getElementById('controls');
+
+    const KOCH_DEPTH = 4;
+    const RING_COUNT = 2;
+    // 无分叉时半臂点数为 3^depth + 1；depth=4 → 82，结构性地恒 >= 30
+    const MIN_HALF_ARM_POINTS = 3 ** KOCH_DEPTH + 1;
+    let flakeCount = 12;
+    let fallSpeed = 1.0;
+    let viewWidth = window.innerWidth;
+    let viewHeight = window.innerHeight;
+
+    function getViewportSize() {
+      const vv = window.visualViewport;
+      return {
+        width: vv ? vv.width : window.innerWidth,
+        height: vv ? vv.height : window.innerHeight,
+        offsetTop: vv ? vv.offsetTop : 0,
+        offsetLeft: vv ? vv.offsetLeft : 0,
+      };
+    }
+
+    function resize() {
+      const { width, height, offsetTop, offsetLeft } = getViewportSize();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      viewWidth = width;
+      viewHeight = height;
+
+      canvas.width = Math.max(1, Math.round(width * dpr));
+      canvas.height = Math.max(1, Math.round(height * dpr));
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      canvas.style.transform = `translate(${offsetLeft}px, ${offsetTop}px)`;
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resize();
+    window.addEventListener('resize', () => {
+      resize();
+      initDistantSnow();
+      regenerate();
+    });
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => {
+        resize();
+        initDistantSnow();
+        regenerate();
+      }, 200);
+    });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => {
+        resize();
+        initDistantSnow();
+      });
+      window.visualViewport.addEventListener('scroll', () => {
+        const { offsetTop, offsetLeft } = getViewportSize();
+        canvas.style.transform = `translate(${offsetLeft}px, ${offsetTop}px)`;
+      });
+    }
+
+    function rand(min, max, rng) {
+      const r = rng || Math.random;
+      return min + r() * (max - min);
+    }
+
+    /** 在同一批次内保证种子不重复 */
+    function uniqueSeed(usedSeeds) {
+      let seed = (Math.random() * 0xFFFFFFFF) >>> 0;
+      while (usedSeeds.has(seed)) {
+        seed = (Math.random() * 0xFFFFFFFF) >>> 0;
+      }
+      usedSeeds.add(seed);
+      return seed;
+    }
+
+    /** 可复现的伪随机（每片雪花固定形状） */
+    function mulberry32(seed) {
+      return function () {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    /** 为单片雪花生成受控随机 Koch 参数（仅在 +x 半臂上采样，再镜像+旋转） */
+    function createKochStyle(seed) {
+      const rng = mulberry32(seed);
+      return {
+        seed,
+        rng,
+        bumpChance: rand(0.68, 0.93, rng),
+        bumpScale: rand(0.78, 1.22, rng),
+        ringSpread: rand(0.88, 1.12, rng),
+      };
+    }
+
+    function rotatePt(x, y, angle) {
+      const c = Math.cos(angle);
+      const s = Math.sin(angle);
+      return [x * c - y * s, x * s + y * c];
+    }
+
+    /** 沿 x 轴镜像（使单臂具有左右对称） */
+    function flipY(points) {
+      return points.map(([x, y]) => [x, -y]);
+    }
+
+    /**
+     * 随机 Koch：bumpChance / bumpScale 控制分叉密度与大小；四层纯随机
+     */
+    function collectKoch(x1, y1, x2, y2, depth, bumpSign, style) {
+      const { bumpChance, bumpScale, rng } = style;
+      const pts = [[x1, y1]];
+
+      function recurse(ax, ay, bx, by, d) {
+        if (d === 0) {
+          pts.push([bx, by]);
+          return;
+        }
+
+        const dx = bx - ax;
+        const dy = by - ay;
+        const xA = ax + dx / 3;
+        const yA = ay + dy / 3;
+        const xB = ax + (2 * dx) / 3;
+        const yB = ay + (2 * dy) / 3;
+
+        recurse(ax, ay, xA, yA, d - 1);
+
+        const levelBias = bumpChance * (0.72 + 0.28 * (d / depth));
+        const doBump = rng() < levelBias;
+
+        if (doBump) {
+          const angle = Math.atan2(dy, dx);
+          const segLen = (Math.hypot(dx, dy) / 3) * bumpScale;
+          const bumpAngle = angle + bumpSign * Math.PI / 3;
+          const xC = xA + Math.cos(bumpAngle) * segLen;
+          const yC = yA + Math.sin(bumpAngle) * segLen;
+          recurse(xA, yA, xC, yC, d - 1);
+          recurse(xC, yC, xB, yB, d - 1);
+        } else {
+          recurse(xA, yA, xB, yB, d - 1);
+        }
+
+        recurse(xB, yB, bx, by, d - 1);
+      }
+
+      recurse(x1, y1, x2, y2, depth);
+      return pts;
+    }
+
+    /** 将点列旋转复制 n 份（严格 n 重对称） */
+    function rotateCopies(points, copies) {
+      const result = [];
+      const step = (Math.PI * 2) / copies;
+      for (let i = 0; i < copies; i++) {
+        result.push(points.map(([x, y]) => rotatePt(x, y, i * step)));
+      }
+      return result;
+    }
+
+    function strokePolyline(c, points) {
+      if (points.length < 2) return;
+      c.beginPath();
+      c.moveTo(points[0][0], points[0][1]);
+      for (let i = 1; i < points.length; i++) {
+        c.lineTo(points[i][0], points[i][1]);
+      }
+      c.stroke();
+    }
+
+    function fillPolygon(c, points) {
+      if (points.length < 3) return;
+      c.beginPath();
+      c.moveTo(points[0][0], points[0][1]);
+      for (let i = 1; i < points.length; i++) {
+        c.lineTo(points[i][0], points[i][1]);
+      }
+      c.closePath();
+      c.fill();
+    }
+
+    /** 单条主臂的闭合填充区域（上下 Koch 轮廓之间的冰晶主体） */
+    function buildArmBlade(radius, armDepth, style) {
+      const lower = collectKoch(0, 0, radius, 0, armDepth, -1, style);
+      const upper = flipY(lower);
+      const blade = [...upper];
+      for (let i = lower.length - 2; i >= 0; i--) {
+        blade.push(lower[i]);
+      }
+      return blade;
+    }
+
+    /** 平头正六边形顶点（边中点方向与主臂一致：0°, 60°, …） */
+    function flatTopHexVertices(circumRadius) {
+      const verts = [];
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i + Math.PI / 6;
+        verts.push([Math.cos(a) * circumRadius, Math.sin(a) * circumRadius]);
+      }
+      return verts;
+    }
+
+    /** 正六边形闭合折线（天然 D6 对称） */
+    function hexPolyline(circumRadius) {
+      const verts = flatTopHexVertices(circumRadius);
+      return [...verts, verts[0]];
+    }
+
+    /** 按环数计算各六边形半径（ringSpread 控制环的疏密） */
+    function ringRadii(count, radius, ringSpread = 1) {
+      if (count <= 0) return [];
+      const inner = 0.12 * ringSpread;
+      const spread = 0.22 * ringSpread;
+      if (count === 1) return [radius * inner];
+      const radii = [];
+      for (let i = 0; i < count; i++) {
+        const t = i / (count - 1);
+        radii.push(radius * (inner + t * spread));
+      }
+      return radii;
+    }
+
+    function fillHexAnnulus(c, innerR, outerR) {
+      c.beginPath();
+      const outer = flatTopHexVertices(outerR);
+      const inner = flatTopHexVertices(innerR).reverse();
+      c.moveTo(outer[0][0], outer[0][1]);
+      outer.slice(1).forEach(([x, y]) => c.lineTo(x, y));
+      c.closePath();
+      c.moveTo(inner[0][0], inner[0][1]);
+      inner.slice(1).forEach(([x, y]) => c.lineTo(x, y));
+      c.closePath();
+      c.fill('evenodd');
+    }
+
+    /**
+     * 生成一片雪花的所有线段
+     * D6 对称 = 六重旋转 + 镜像：先在 +x 主臂上做出左右对称，再旋转复制 6 份
+     */
+    function buildSnowflakeGeometry(radius, config) {
+      const segments = [];
+      const style = config.kochStyle;
+
+      const armHalf = collectKoch(0, 0, radius, 0, config.armDepth, -1, style);
+      [armHalf, flipY(armHalf)].forEach((template) => {
+        rotateCopies(template, 6).forEach((pts) => segments.push(pts));
+      });
+
+      ringRadii(config.ringCount, radius, style.ringSpread).forEach((r) => {
+        segments.push(hexPolyline(r));
+      });
+
+      return segments;
+    }
+
+    /** 预计算单片雪花几何（避免每帧重新递归） */
+    function bakeFlakeGeometry(flake) {
+      const { radius, config } = flake;
+      const style = config.kochStyle;
+      const armBlade = buildArmBlade(radius, config.armDepth, style);
+      flake.geometry = {
+        segments: buildSnowflakeGeometry(radius, config),
+        armFills: rotateCopies(armBlade, 6),
+        rings: ringRadii(config.ringCount, radius, style.ringSpread),
+      };
+    }
+
+    /** 在指定 context 上绘制雪花内容（中心为原点） */
+    function renderSnowflakeContent(c, radius, config, geometry) {
+      const { hue, lightness, alpha } = config;
+      const { segments, armFills, rings } = geometry;
+
+      const glow = c.createRadialGradient(0, 0, 0, 0, 0, radius * 1.35);
+      glow.addColorStop(0, `hsla(${hue}, 55%, 92%, ${alpha * 0.22})`);
+      glow.addColorStop(0.55, `hsla(${hue}, 60%, 85%, ${alpha * 0.08})`);
+      glow.addColorStop(1, `hsla(${hue}, 70%, 75%, 0)`);
+      c.fillStyle = glow;
+      c.beginPath();
+      c.arc(0, 0, radius * 1.35, 0, Math.PI * 2);
+      c.fill();
+
+      const bodyGrad = c.createRadialGradient(0, 0, 0, 0, 0, radius * 1.05);
+      bodyGrad.addColorStop(0, `hsla(${hue}, 35%, ${lightness}%, ${alpha * 0.62})`);
+      bodyGrad.addColorStop(0.35, `hsla(${hue}, 45%, 94%, ${alpha * 0.42})`);
+      bodyGrad.addColorStop(0.75, `hsla(${hue}, 55%, 88%, ${alpha * 0.22})`);
+      bodyGrad.addColorStop(1, `hsla(${hue}, 65%, 82%, ${alpha * 0.06})`);
+      c.fillStyle = bodyGrad;
+      armFills.forEach((pts) => fillPolygon(c, pts));
+
+      if (rings.length >= 1) {
+        const coreGrad = c.createRadialGradient(0, 0, 0, 0, 0, rings[0] * 1.2);
+        coreGrad.addColorStop(0, `hsla(${hue}, 20%, 99%, ${alpha * 0.85})`);
+        coreGrad.addColorStop(1, `hsla(${hue}, 40%, 92%, ${alpha * 0.45})`);
+        c.fillStyle = coreGrad;
+        fillPolygon(c, flatTopHexVertices(rings[0]));
+      }
+      for (let i = 1; i < rings.length; i++) {
+        const ringGrad = c.createRadialGradient(0, 0, rings[i - 1], 0, 0, rings[i] * 1.05);
+        ringGrad.addColorStop(0, `hsla(${hue}, 40%, 93%, ${alpha * 0.35})`);
+        ringGrad.addColorStop(1, `hsla(${hue}, 55%, 86%, ${alpha * 0.12})`);
+        c.fillStyle = ringGrad;
+        fillHexAnnulus(c, rings[i - 1], rings[i]);
+      }
+
+      c.strokeStyle = `hsla(${hue}, 30%, 98%, ${alpha * 0.75})`;
+      c.lineWidth = config.lineWidth * 0.55;
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      segments.forEach((pts) => strokePolyline(c, pts));
+
+      const highlight = c.createRadialGradient(0, 0, 0, 0, 0, radius * 0.06);
+      highlight.addColorStop(0, `hsla(${hue}, 10%, 100%, ${alpha * 0.95})`);
+      highlight.addColorStop(1, `hsla(${hue}, 30%, 95%, 0)`);
+      c.fillStyle = highlight;
+      c.beginPath();
+      c.arc(0, 0, radius * 0.06, 0, Math.PI * 2);
+      c.fill();
+    }
+
+    /** 估算雪花占用半径（含 Koch 侧枝与线宽） */
+    function flakeBoundsRadius(radius, config) {
+      const scale = config.kochStyle?.bumpScale ?? 1;
+      const kochFactor = 1 + config.armDepth * 0.05 * scale;
+      return radius * kochFactor + config.lineWidth * 3;
+    }
+
+    /** 离屏预渲染为位图，动画帧只需 drawImage */
+    function bakeFlakeBitmap(flake) {
+      const bounds = flakeBoundsRadius(flake.radius, flake.config);
+      const half = Math.ceil(bounds * 1.15);
+      const size = half * 2;
+
+      const oc = document.createElement('canvas');
+      oc.width = size;
+      oc.height = size;
+      const octx = oc.getContext('2d');
+      octx.translate(half, half);
+      renderSnowflakeContent(octx, flake.radius, flake.config, flake.geometry);
+
+      flake.bitmap = oc;
+      flake.bitmapHalf = half;
+    }
+
+    function bakeFlake(flake) {
+      bakeFlakeGeometry(flake);
+      bakeFlakeBitmap(flake);
+    }
+
+    function drawSnowflake(flake) {
+      ctx.save();
+      ctx.translate(flake.x, flake.y);
+      ctx.rotate(flake.rotation);
+      ctx.drawImage(flake.bitmap, -flake.bitmapHalf, -flake.bitmapHalf);
+      ctx.restore();
+    }
+
+    function randomConfig(isMain, usedSeeds) {
+      const seed = uniqueSeed(usedSeeds);
+      return {
+        armDepth: KOCH_DEPTH,
+        ringCount: RING_COUNT,
+        kochStyle: createKochStyle(seed),
+        lineWidth: isMain ? rand(0.7, 1.2) : rand(0.4, 0.8),
+        hue: rand(185, 225),
+        lightness: rand(86, 98),
+        alpha: rand(0.72, 0.95),
+      };
+    }
+
+    function reseedFlake(flake) {
+      flake.config.kochStyle = createKochStyle((Math.random() * 0xFFFFFFFF) >>> 0);
+      bakeFlake(flake);
+    }
+
+    function createSnowflake(x, y, radius, usedSeeds) {
+      const config = randomConfig(radius > Math.min(viewWidth, viewHeight) * 0.1, usedSeeds);
+      const base = Math.min(viewWidth, viewHeight);
+      const speedScale = base / 900 / 7;
+      const sizeFactor = Math.min((base * 0.09) / radius, 2.2);
+
+      const flake = {
+        x, y, radius,
+        rotation: rand(0, Math.PI * 2),
+        config,
+        baseVy: rand(0.35, 0.85) * speedScale * sizeFactor,
+        baseVx: rand(-0.06, 0.06) * speedScale,
+        rotationSpeed: rand(-0.0004, 0.0004),
+        swayPhase: rand(0, Math.PI * 2),
+        baseSwayAmp: rand(0.4, 1.0) * speedScale,
+      };
+      bakeFlake(flake);
+      return flake;
+    }
+
+    function generateSnowflakes() {
+      const flakes = [];
+      const w = viewWidth;
+      const h = viewHeight;
+      const base = Math.min(w, h);
+
+      const usedSeeds = new Set();
+
+      for (let i = 0; i < flakeCount; i++) {
+        const radius = rand(base * 0.045, base * 0.13);
+        const bounds = flakeBoundsRadius(radius, { armDepth: KOCH_DEPTH, lineWidth: 1, kochStyle: { bumpScale: 1 } });
+        flakes.push(createSnowflake(
+          rand(bounds, Math.max(bounds, w - bounds)),
+          rand(-h * 0.3, h),
+          radius,
+          usedSeeds
+        ));
+      }
+      return flakes;
+    }
+
+    let snowflakes = [];
+    let distantSnow = [];
+    const DISTANT_SNOW_COUNT = 80;
+
+    function distantSnowSpeedScale() {
+      return Math.min(viewWidth, viewHeight) / 900 / 7;
+    }
+
+    function createDistantSnowParticle() {
+      const w = viewWidth;
+      const h = viewHeight;
+      const speedScale = distantSnowSpeedScale();
+      return {
+        x: Math.random() * w,
+        y: Math.random() * (h + 50) - 50,
+        r: rand(0.35, 1.25),
+        alpha: rand(0.1, 0.32),
+        vy: rand(0.06, 0.18) * speedScale,
+        vx: rand(-0.015, 0.015) * speedScale,
+      };
+    }
+
+    function initDistantSnow() {
+      distantSnow = Array.from({ length: DISTANT_SNOW_COUNT }, createDistantSnowParticle);
+    }
+
+    function updateDistantSnow(dt) {
+      const w = viewWidth;
+      const h = viewHeight;
+
+      distantSnow.forEach((p) => {
+        p.x += p.vx * fallSpeed * dt;
+        p.y += p.vy * fallSpeed * dt;
+
+        if (p.y - p.r > h + 10) {
+          p.x = Math.random() * w;
+          p.y = -p.r - Math.random() * 50;
+        }
+        if (p.x < -10) p.x = w + 10;
+        if (p.x > w + 10) p.x = -10;
+      });
+    }
+
+    function drawDistantSnow() {
+      distantSnow.forEach((p) => {
+        ctx.fillStyle = `rgba(210, 225, 245, ${p.alpha})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function updateFlakes(dt) {
+      const w = viewWidth;
+      const h = viewHeight;
+
+      snowflakes.forEach((f) => {
+        f.swayPhase += 0.0006 * dt;
+        f.x += (f.baseVx + Math.sin(f.swayPhase) * f.baseSwayAmp * 0.025) * fallSpeed * dt;
+        f.y += f.baseVy * fallSpeed * dt;
+        f.rotation += f.rotationSpeed * dt;
+
+        const bounds = flakeBoundsRadius(f.radius, f.config);
+        if (f.y - bounds > h + 20) {
+          f.y = -bounds - rand(0, h * 0.3);
+          f.x = rand(bounds, Math.max(bounds, w - bounds));
+          f.swayPhase = rand(0, Math.PI * 2);
+          reseedFlake(f);
+        }
+        if (f.x + bounds < -20) f.x = w + bounds;
+        if (f.x - bounds > w + 20) f.x = -bounds;
+      });
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, viewWidth, viewHeight);
+      drawDistantSnow();
+      for (let i = 0; i < snowflakes.length; i++) {
+        drawSnowflake(snowflakes[i]);
+      }
+    }
+
+    let lastTime = 0;
+
+    function animate(time) {
+      const dt = Math.min(time - lastTime, 48);
+      lastTime = time;
+      updateDistantSnow(dt);
+      updateFlakes(dt);
+      draw();
+      requestAnimationFrame(animate);
+    }
+
+    function regenerate() {
+      snowflakes = generateSnowflakes();
+    }
+
+    function updateSpeedLabel() {
+      speedValue.textContent = `${fallSpeed.toFixed(1)}×`;
+    }
+
+    countSlider.addEventListener('input', () => {
+      flakeCount = parseInt(countSlider.value, 10);
+      countValue.textContent = flakeCount;
+      regenerate();
+    });
+
+    speedSlider.addEventListener('input', () => {
+      fallSpeed = parseInt(speedSlider.value, 10) / 10;
+      updateSpeedLabel();
+    });
+
+    updateSpeedLabel();
+
+    controls.addEventListener('click', (e) => e.stopPropagation());
+    controls.addEventListener('mousedown', (e) => e.stopPropagation());
+    controls.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+
+    let suppressNextClick = false;
+    canvas.addEventListener('touchend', (e) => {
+      if (e.target !== canvas) return;
+      suppressNextClick = true;
+      regenerate();
+    }, { passive: true });
+    canvas.addEventListener('click', () => {
+      if (suppressNextClick) {
+        suppressNextClick = false;
+        return;
+      }
+      regenerate();
+    });
+    initDistantSnow();
+    regenerate();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
