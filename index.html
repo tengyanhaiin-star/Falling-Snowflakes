@@ -274,12 +274,30 @@
       return points.map(([x, y]) => [x, -y]);
     }
 
+    /** 从种子重建 RNG 流（与 createKochStyle 消耗一致） */
+    function forkKochRng(style) {
+      const rng = mulberry32(style.seed);
+      rand(0.68, 0.93, rng);
+      rand(0.78, 1.22, rng);
+      rand(0.88, 1.12, rng);
+      return {
+        seed: style.seed,
+        rng,
+        bumpChance: style.bumpChance,
+        bumpScale: style.bumpScale,
+        ringSpread: style.ringSpread,
+        forceD4Bump: false,
+      };
+    }
+
     /**
      * 随机 Koch：bumpChance / bumpScale 控制分叉密度与大小；四层纯随机
+     * style.forceD4Bump 为 true 时，d=4 层强制分叉
      */
     function collectKoch(x1, y1, x2, y2, depth, bumpSign, style) {
-      const { bumpChance, bumpScale, rng } = style;
+      const { bumpChance, bumpScale, rng, forceD4Bump = false } = style;
       const pts = [[x1, y1]];
+      let bumpedD4 = false;
 
       function recurse(ax, ay, bx, by, d) {
         if (d === 0) {
@@ -297,9 +315,13 @@
         recurse(ax, ay, xA, yA, d - 1);
 
         const levelBias = bumpChance * (0.72 + 0.28 * (d / depth));
-        const doBump = rng() < levelBias;
+        let doBump = rng() < levelBias;
+        if (d === 4 && forceD4Bump && !doBump) {
+          doBump = true;
+        }
 
         if (doBump) {
+          if (d === 4) bumpedD4 = true;
           const angle = Math.atan2(dy, dx);
           const segLen = (Math.hypot(dx, dy) / 3) * bumpScale;
           const bumpAngle = angle + bumpSign * Math.PI / 3;
@@ -315,7 +337,27 @@
       }
 
       recurse(x1, y1, x2, y2, depth);
-      return pts;
+      return { points: pts, bumpedD4 };
+    }
+
+    function collectHalfArmKoch(radius, armDepth, style) {
+      return collectKoch(0, 0, radius, 0, armDepth, -1, style);
+    }
+
+    /** 填充与描边各采样一条 Koch；至少一条在 d=4 处分叉，避免光杆 */
+    function collectFillAndStrokeKoch(radius, armDepth, baseStyle) {
+      let style = forkKochRng(baseStyle);
+      let fill = collectHalfArmKoch(radius, armDepth, style);
+      let stroke = collectHalfArmKoch(radius, armDepth, style);
+
+      if (!fill.bumpedD4 && !stroke.bumpedD4) {
+        style = forkKochRng(baseStyle);
+        style.forceD4Bump = true;
+        fill = collectHalfArmKoch(radius, armDepth, style);
+        stroke = collectHalfArmKoch(radius, armDepth, style);
+      }
+
+      return { fill, stroke };
     }
 
     /** 将点列旋转复制 n 份（严格 n 重对称） */
@@ -349,15 +391,26 @@
       c.fill();
     }
 
-    /** 单条主臂的闭合填充区域（上下 Koch 轮廓之间的冰晶主体） */
-    function buildArmBlade(radius, armDepth, style) {
-      const lower = collectKoch(0, 0, radius, 0, armDepth, -1, style);
+    /** 由半臂 Koch 折线构建闭合填充区域 */
+    function armBladeFromHalf(lower) {
       const upper = flipY(lower);
       const blade = [...upper];
       for (let i = lower.length - 2; i >= 0; i--) {
         blade.push(lower[i]);
       }
       return blade;
+    }
+
+    /** 由半臂 Koch 折线构建描边线段（含六重旋转与六边形环） */
+    function strokeSegmentsFromHalf(armHalf, radius, config, style) {
+      const segments = [];
+      [armHalf, flipY(armHalf)].forEach((template) => {
+        rotateCopies(template, 6).forEach((pts) => segments.push(pts));
+      });
+      ringRadii(config.ringCount, radius, style.ringSpread).forEach((r) => {
+        segments.push(hexPolyline(r));
+      });
+      return segments;
     }
 
     /** 平头正六边形顶点（边中点方向与主臂一致：0°, 60°, …） */
@@ -403,34 +456,14 @@
       c.fill('evenodd');
     }
 
-    /**
-     * 生成一片雪花的所有线段
-     * D6 对称 = 六重旋转 + 镜像：先在 +x 主臂上做出左右对称，再旋转复制 6 份
-     */
-    function buildSnowflakeGeometry(radius, config) {
-      const segments = [];
-      const style = config.kochStyle;
-
-      const armHalf = collectKoch(0, 0, radius, 0, config.armDepth, -1, style);
-      [armHalf, flipY(armHalf)].forEach((template) => {
-        rotateCopies(template, 6).forEach((pts) => segments.push(pts));
-      });
-
-      ringRadii(config.ringCount, radius, style.ringSpread).forEach((r) => {
-        segments.push(hexPolyline(r));
-      });
-
-      return segments;
-    }
-
     /** 预计算单片雪花几何（避免每帧重新递归） */
     function bakeFlakeGeometry(flake) {
       const { radius, config } = flake;
       const style = config.kochStyle;
-      const armBlade = buildArmBlade(radius, config.armDepth, style);
+      const { fill, stroke } = collectFillAndStrokeKoch(radius, config.armDepth, style);
       flake.geometry = {
-        segments: buildSnowflakeGeometry(radius, config),
-        armFills: rotateCopies(armBlade, 6),
+        segments: strokeSegmentsFromHalf(stroke.points, radius, config, style),
+        armFills: rotateCopies(armBladeFromHalf(fill.points), 6),
         rings: ringRadii(config.ringCount, radius, style.ringSpread),
       };
     }
