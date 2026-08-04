@@ -693,6 +693,11 @@
       snowflakes = generateSnowflakes();
     }
 
+    function regenerateScene() {
+      initDistantSnow();
+      regenerate();
+    }
+
     function updateSpeedLabel() {
       speedValue.textContent = `${fallSpeed.toFixed(1)}×`;
     }
@@ -725,20 +730,13 @@
     }, { passive: false });
     controls.addEventListener('touchmove', blockPinchZoom, { passive: false });
 
-    let suppressNextClick = false;
-    canvas.addEventListener('touchend', (e) => {
-      if (e.target !== canvas) return;
-      suppressNextClick = true;
-      initDistantSnow();
-      regenerate();
-    }, { passive: true });
-    canvas.addEventListener('click', () => {
-      if (suppressNextClick) {
-        suppressNextClick = false;
-        return;
-      }
-      initDistantSnow();
-      regenerate();
+    let lastSceneRegenerateAt = 0;
+    canvas.addEventListener('pointerup', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      const now = Date.now();
+      if (now - lastSceneRegenerateAt < 300) return;
+      lastSceneRegenerateAt = now;
+      regenerateScene();
     });
 
     ['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
