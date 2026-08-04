@@ -2,7 +2,7 @@
 
 A single-file, interactive snowfall animation built with HTML5 Canvas. Each snowflake is procedurally generated using a randomized Koch curve with six-fold symmetry, then rendered as a glowing ice crystal that drifts and sways across a dark winter sky.
 
-Open `snowflake.html` in any modern browser — no build step or server required.
+Open [Falling Snowflakes](https://tengyanhaiin-star.github.io/Falling-Snowflakes/) in any modern browser — no build step or server required.
 
 ## Preview
 
