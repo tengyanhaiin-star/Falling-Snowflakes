@@ -51,15 +51,6 @@ The page is tuned for iPhone and iOS Safari:
 - Landscape mode switches to a compact single-row control bar and hides the hint text
 - Tap the canvas to regenerate (no 300 ms click delay)
 
-Adding the page to the Home Screen provides the best full-screen experience.
-
-## File structure
-
-```
-snowflake.html   — entire app (HTML, CSS, JavaScript)
-README.md        — this file
-```
-
 ## Dependencies
 
 - [Roboto](https://fonts.google.com/specimen/Roboto) via Google Fonts (loaded at runtime; requires network on first visit)
@@ -72,4 +63,4 @@ Works in current versions of Chrome, Firefox, Safari, and Edge. Requires Canvas 
 
 ## License
 
-No license specified. Use and modify freely for personal or educational purposes.
+MIT — see [LICENSE](LICENSE) for details.
