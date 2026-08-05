@@ -357,7 +357,7 @@
       return collectKoch(0, 0, radius, 0, armDepth, -1, style);
     }
 
-    /** 填充随机；描边 d=3 最外段必分叉且 bumpScale≥1；填充与描边至少一条 d=4 分叉 */
+    /** 填充随机；描边 d=3 最外段必分叉；填充与描边至少一条 d=4 分叉 */
     function collectFillAndStrokeKoch(radius, armDepth, baseStyle) {
       function sample(forceD4OnFill) {
         const style = forkKochRng(baseStyle);
@@ -522,7 +522,7 @@
       }
 
       c.strokeStyle = `hsla(${hue}, 30%, 98%, ${alpha * 0.75})`;
-      c.lineWidth = config.lineWidth * 0.55;
+      c.lineWidth = config.lineWidth * 1.65;
       c.lineCap = 'round';
       c.lineJoin = 'round';
       segments.forEach((pts) => strokePolyline(c, pts));
