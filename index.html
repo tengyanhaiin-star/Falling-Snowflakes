@@ -287,19 +287,28 @@
         bumpScale: style.bumpScale,
         ringSpread: style.ringSpread,
         forceD4Bump: false,
+        forceD3OutermostBump: false,
       };
     }
 
     /**
      * 随机 Koch：bumpChance / bumpScale 控制分叉密度与大小；四层纯随机
-     * style.forceD4Bump 为 true 时，d=4 层强制分叉
+     * style.forceD4Bump：d=4 强制分叉
+     * style.forceD3OutermostBump：d=3 主脊最靠外一段强制分叉
      */
     function collectKoch(x1, y1, x2, y2, depth, bumpSign, style) {
-      const { bumpChance, bumpScale, rng, forceD4Bump = false } = style;
+      const {
+        bumpChance,
+        bumpScale,
+        rng,
+        forceD4Bump = false,
+        forceD3OutermostBump = false,
+      } = style;
       const pts = [[x1, y1]];
       let bumpedD4 = false;
+      let bumpedD3Outermost = false;
 
-      function recurse(ax, ay, bx, by, d) {
+      function recurse(ax, ay, bx, by, d, onOutermostSpine) {
         if (d === 0) {
           pts.push([bx, by]);
           return;
@@ -312,47 +321,55 @@
         const xB = ax + (2 * dx) / 3;
         const yB = ay + (2 * dy) / 3;
 
-        recurse(ax, ay, xA, yA, d - 1);
+        recurse(ax, ay, xA, yA, d - 1, false);
 
         const levelBias = bumpChance * (0.72 + 0.28 * (d / depth));
         let doBump = rng() < levelBias;
         if (d === 4 && forceD4Bump && !doBump) {
           doBump = true;
         }
+        if (d === 3 && onOutermostSpine && forceD3OutermostBump && !doBump) {
+          doBump = true;
+        }
 
         if (doBump) {
           if (d === 4) bumpedD4 = true;
+          if (d === 3 && onOutermostSpine) bumpedD3Outermost = true;
           const angle = Math.atan2(dy, dx);
           const segLen = (Math.hypot(dx, dy) / 3) * bumpScale;
           const bumpAngle = angle + bumpSign * Math.PI / 3;
           const xC = xA + Math.cos(bumpAngle) * segLen;
           const yC = yA + Math.sin(bumpAngle) * segLen;
-          recurse(xA, yA, xC, yC, d - 1);
-          recurse(xC, yC, xB, yB, d - 1);
+          recurse(xA, yA, xC, yC, d - 1, false);
+          recurse(xC, yC, xB, yB, d - 1, false);
         } else {
-          recurse(xA, yA, xB, yB, d - 1);
+          recurse(xA, yA, xB, yB, d - 1, false);
         }
 
-        recurse(xB, yB, bx, by, d - 1);
+        recurse(xB, yB, bx, by, d - 1, onOutermostSpine);
       }
 
-      recurse(x1, y1, x2, y2, depth);
-      return { points: pts, bumpedD4 };
+      recurse(x1, y1, x2, y2, depth, false);
+      return { points: pts, bumpedD4, bumpedD3Outermost };
     }
 
     function collectHalfArmKoch(radius, armDepth, style) {
       return collectKoch(0, 0, radius, 0, armDepth, -1, style);
     }
 
-    /** 填充与描边各采样一条 Koch；至少一条在 d=4 处分叉，避免光杆 */
+    /** 填充与描边各采样一条 Koch；至少一条满足 d=4 / d=3 最外段分叉，避免光杆 */
     function collectFillAndStrokeKoch(radius, armDepth, baseStyle) {
       let style = forkKochRng(baseStyle);
       let fill = collectHalfArmKoch(radius, armDepth, style);
       let stroke = collectHalfArmKoch(radius, armDepth, style);
 
-      if (!fill.bumpedD4 && !stroke.bumpedD4) {
+      const needsD4 = !fill.bumpedD4 && !stroke.bumpedD4;
+      const needsD3Outermost = !fill.bumpedD3Outermost && !stroke.bumpedD3Outermost;
+
+      if (needsD4 || needsD3Outermost) {
         style = forkKochRng(baseStyle);
-        style.forceD4Bump = true;
+        style.forceD4Bump = needsD4;
+        style.forceD3OutermostBump = needsD3Outermost;
         fill = collectHalfArmKoch(radius, armDepth, style);
         stroke = collectHalfArmKoch(radius, armDepth, style);
       }
