@@ -294,7 +294,7 @@
     /**
      * 随机 Koch：bumpChance / bumpScale 控制分叉密度与大小；四层纯随机
      * style.forceD4Bump：d=4 强制分叉
-     * style.forceD3OutermostBump：d=3 主脊最靠外一段强制分叉
+     * style.forceD3OutermostBump：d=3 主脊最靠外一段强制分叉（仅用于描边）
      */
     function collectKoch(x1, y1, x2, y2, depth, bumpSign, style) {
       const {
@@ -357,24 +357,23 @@
       return collectKoch(0, 0, radius, 0, armDepth, -1, style);
     }
 
-    /** 填充与描边各采样一条 Koch；至少一条满足 d=4 / d=3 最外段分叉，避免光杆 */
+    /** 填充随机；描边 d=3 最外段必分叉；填充与描边至少一条 d=4 分叉 */
     function collectFillAndStrokeKoch(radius, armDepth, baseStyle) {
-      let style = forkKochRng(baseStyle);
-      let fill = collectHalfArmKoch(radius, armDepth, style);
-      let stroke = collectHalfArmKoch(radius, armDepth, style);
-
-      const needsD4 = !fill.bumpedD4 && !stroke.bumpedD4;
-      const needsD3Outermost = !fill.bumpedD3Outermost && !stroke.bumpedD3Outermost;
-
-      if (needsD4 || needsD3Outermost) {
-        style = forkKochRng(baseStyle);
-        style.forceD4Bump = needsD4;
-        style.forceD3OutermostBump = needsD3Outermost;
-        fill = collectHalfArmKoch(radius, armDepth, style);
-        stroke = collectHalfArmKoch(radius, armDepth, style);
+      function sample(forceD4OnFill) {
+        const style = forkKochRng(baseStyle);
+        style.forceD4Bump = forceD4OnFill;
+        const fill = collectHalfArmKoch(radius, armDepth, style);
+        style.forceD4Bump = false;
+        style.forceD3OutermostBump = true;
+        const stroke = collectHalfArmKoch(radius, armDepth, style);
+        return { fill, stroke };
       }
 
-      return { fill, stroke };
+      let result = sample(false);
+      if (!result.fill.bumpedD4 && !result.stroke.bumpedD4) {
+        result = sample(true);
+      }
+      return result;
     }
 
     /** 将点列旋转复制 n 份（严格 n 重对称） */
