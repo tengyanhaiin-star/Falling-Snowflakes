@@ -294,7 +294,7 @@
     /**
      * 随机 Koch：bumpChance / bumpScale 控制分叉密度与大小；四层纯随机
      * style.forceD4Bump：d=4 强制分叉
-     * style.forceD3OutermostBump：d=3 主脊最靠外一段强制分叉（仅用于描边）
+     * style.forceD3OutermostBump：d=3 主脊最靠外一段强制分叉（仅用于描边，且描边 bumpScale≥1）
      */
     function collectKoch(x1, y1, x2, y2, depth, bumpSign, style) {
       const {
@@ -357,7 +357,7 @@
       return collectKoch(0, 0, radius, 0, armDepth, -1, style);
     }
 
-    /** 填充随机；描边 d=3 最外段必分叉；填充与描边至少一条 d=4 分叉 */
+    /** 填充随机；描边 d=3 最外段必分叉且 bumpScale≥1；填充与描边至少一条 d=4 分叉 */
     function collectFillAndStrokeKoch(radius, armDepth, baseStyle) {
       function sample(forceD4OnFill) {
         const style = forkKochRng(baseStyle);
@@ -365,6 +365,7 @@
         const fill = collectHalfArmKoch(radius, armDepth, style);
         style.forceD4Bump = false;
         style.forceD3OutermostBump = true;
+        style.bumpScale = Math.max(style.bumpScale, 1);
         const stroke = collectHalfArmKoch(radius, armDepth, style);
         return { fill, stroke };
       }
