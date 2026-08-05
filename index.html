@@ -365,7 +365,6 @@
         const fill = collectHalfArmKoch(radius, armDepth, style);
         style.forceD4Bump = false;
         style.forceD3OutermostBump = true;
-        style.bumpScale = Math.max(style.bumpScale, 1);
         const stroke = collectHalfArmKoch(radius, armDepth, style);
         return { fill, stroke };
       }
