@@ -294,7 +294,7 @@
     /**
      * 随机 Koch：bumpChance / bumpScale 控制分叉密度与大小；四层纯随机
      * style.forceD4Bump：d=4 强制分叉
-     * style.forceD3OutermostBump：d=3 主脊最靠外一段强制分叉（仅用于描边，且描边 bumpScale≥1）
+     * style.forceD3OutermostBump：d=3 主脊最靠外一段强制分叉（仅用于描边）
      */
     function collectKoch(x1, y1, x2, y2, depth, bumpSign, style) {
       const {
@@ -522,7 +522,7 @@
       }
 
       c.strokeStyle = `hsla(${hue}, 30%, 98%, ${alpha * 0.75})`;
-      c.lineWidth = config.lineWidth * 1.65;
+      c.lineWidth = config.lineWidth * 0.55;
       c.lineCap = 'round';
       c.lineJoin = 'round';
       segments.forEach((pts) => strokePolyline(c, pts));
