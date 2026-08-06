@@ -11,7 +11,8 @@
   <title>Koch Snowflake</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400&display=swap"></noscript>
   <style>
     html {
       height: 100%;
@@ -159,6 +160,9 @@
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      console.error('Canvas 2D context unavailable');
+    }
     const countSlider = document.getElementById('countSlider');
     const countValue = document.getElementById('countValue');
     const speedSlider = document.getElementById('speedSlider');
@@ -209,7 +213,16 @@
     window.addEventListener('resize', () => {
       resize();
       initDistantSnow();
-      regenerate();
+      if (viewWidth > 0 && viewHeight > 0) {
+        if (snowflakes.length === 0) {
+          try {
+            snowflakes = generateSnowflakes();
+          } catch (err) {
+            console.error('Snowflake generation failed:', err);
+          }
+        }
+        draw();
+      }
     });
     window.addEventListener('orientationchange', () => {
       setTimeout(() => {
@@ -222,6 +235,14 @@
       window.visualViewport.addEventListener('resize', () => {
         resize();
         initDistantSnow();
+        if (snowflakes.length === 0 && viewWidth > 0 && viewHeight > 0) {
+          try {
+            snowflakes = generateSnowflakes();
+          } catch (err) {
+            console.error('Snowflake generation failed:', err);
+          }
+        }
+        draw();
       });
       window.visualViewport.addEventListener('scroll', layoutUiChrome);
     }
@@ -566,6 +587,7 @@
     }
 
     function drawSnowflake(flake) {
+      if (!flake.bitmap) return;
       ctx.save();
       ctx.translate(flake.x, flake.y);
       ctx.rotate(flake.rotation);
@@ -724,6 +746,7 @@
     }
 
     function draw() {
+      if (!ctx || viewWidth <= 0 || viewHeight <= 0) return;
       ctx.clearRect(0, 0, viewWidth, viewHeight);
       drawSceneBackground();
       drawDistantSnow();
@@ -733,23 +756,49 @@
     }
 
     let lastTime = 0;
+    let animLoopStarted = false;
 
     function animate(time) {
-      const dt = Math.min(time - lastTime, 48);
-      lastTime = time;
-      updateDistantSnow(dt);
-      updateFlakes(dt);
-      draw();
+      try {
+        const dt = Math.min(time - lastTime, 48);
+        lastTime = time;
+        updateDistantSnow(dt);
+        updateFlakes(dt);
+        draw();
+      } catch (err) {
+        console.error('Animation frame failed:', err);
+      }
       requestAnimationFrame(animate);
     }
 
     function regenerate() {
+      if (!ctx || viewWidth <= 0 || viewHeight <= 0) return;
       snowflakes = generateSnowflakes();
+      draw();
     }
 
     function regenerateScene() {
+      if (!ctx || viewWidth <= 0 || viewHeight <= 0) return;
       initDistantSnow();
       regenerate();
+    }
+
+    function bootScene() {
+      resize();
+      if (viewWidth <= 0 || viewHeight <= 0) return false;
+      initDistantSnow();
+      try {
+        snowflakes = generateSnowflakes();
+      } catch (err) {
+        console.error('Snowflake generation failed:', err);
+        snowflakes = [];
+      }
+      draw();
+      if (!animLoopStarted) {
+        animLoopStarted = true;
+        requestAnimationFrame(animate);
+      }
+      return true;
     }
 
     function updateSpeedLabel() {
@@ -799,9 +848,19 @@
     document.addEventListener('touchstart', blockPinchZoom, { passive: false, capture: true });
     document.addEventListener('touchmove', blockPinchZoom, { passive: false, capture: true });
 
-    initDistantSnow();
-    regenerate();
-    requestAnimationFrame(animate);
+    function scheduleBoot() {
+      requestAnimationFrame(() => {
+        if (!bootScene()) {
+          requestAnimationFrame(scheduleBoot);
+        }
+      });
+    }
+
+    if (document.readyState === 'complete') {
+      scheduleBoot();
+    } else {
+      window.addEventListener('load', scheduleBoot);
+    }
   </script>
 </body>
 </html>
