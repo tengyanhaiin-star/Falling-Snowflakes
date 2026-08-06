@@ -580,7 +580,7 @@
         ringCount: RING_COUNT,
         kochStyle: createKochStyle(seed),
         // 描边宽度 = lineWidth × radius（相对半径的比例，大屏/大雪花同比例更粗）
-        lineWidth: isMain ? rand(0.0045, 0.007) : rand(0.0025, 0.0045),
+        lineWidth: isMain ? rand(0.009, 0.014) : rand(0.005, 0.009),
         hue: rand(185, 225),
         lightness: rand(86, 98),
         alpha: rand(0.72, 0.95),
@@ -624,7 +624,7 @@
         const radius = rand(base * 0.045, base * 0.13);
         const bounds = flakeBoundsRadius(radius, {
           armDepth: KOCH_DEPTH,
-          lineWidth: 0.007,
+          lineWidth: 0.014,
           kochStyle: { bumpScale: 1 },
         });
         flakes.push(createSnowflake(
