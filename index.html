@@ -25,6 +25,11 @@
       --controls-text: rgba(210, 225, 245, 0.85);
       --controls-accent: #cce8ff;
       --controls-accent-solid: #a8d4ff;
+      --select-bg: #1a2d48;
+      --select-fg: #eef6ff;
+      --select-option-bg: #243a58;
+      --select-option-fg: #eef6ff;
+      --select-border: rgba(160, 200, 255, 0.28);
       background-color: var(--page-bg);
       touch-action: none;
     }
@@ -40,6 +45,11 @@
       --controls-text: rgba(40, 65, 95, 0.88);
       --controls-accent: #2a5a8a;
       --controls-accent-solid: #4a8ac8;
+      --select-bg: #ffffff;
+      --select-fg: #123456;
+      --select-option-bg: #ffffff;
+      --select-option-fg: #123456;
+      --select-border: rgba(74, 138, 200, 0.35);
     }
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
     body {
@@ -149,39 +159,33 @@
       font-variant-numeric: tabular-nums;
       color: var(--controls-accent);
     }
-    .mode-buttons {
-      gap: 6px;
-    }
-    .mode-btn {
-      padding: 6px 12px;
-      border: 1px solid transparent;
+    .controls select.mode-select {
+      padding: 5px 28px 5px 10px;
+      border: 1px solid var(--select-border);
       border-radius: 8px;
+      background-color: var(--select-bg);
+      color: var(--select-fg);
       font-size: 14px;
-      line-height: 1;
+      font-family: inherit;
+      line-height: 1.2;
       cursor: pointer;
       touch-action: manipulation;
-      white-space: nowrap;
-      transition: opacity 0.15s ease, box-shadow 0.15s ease;
+      appearance: auto;
+      -webkit-appearance: menulist;
+      color-scheme: light dark;
     }
-    .mode-btn-day {
-      background-color: #87CEEB;
-      color: #123456;
-      border-color: #6FA3BE;
+    html[data-theme="day"] .controls select.mode-select {
+      color-scheme: light;
     }
-    .mode-btn-night {
-      background-color: #060d18;
-      color: #cce8ff;
-      border-color: #1a3050;
+    html[data-theme="night"] .controls select.mode-select {
+      color-scheme: dark;
     }
-    .mode-btn.is-active {
-      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55);
-      opacity: 1;
+    .controls select.mode-select option {
+      background-color: var(--select-option-bg);
+      color: var(--select-option-fg);
     }
-    .mode-btn:not(.is-active) {
-      opacity: 0.72;
-    }
-    body.landscape-compact .mode-btn {
-      padding: 4px 10px;
+    body.landscape-compact .controls select.mode-select {
+      padding: 3px 24px 3px 8px;
       font-size: 12px;
     }
   </style>
@@ -199,10 +203,10 @@
       <input type="range" id="speedSlider" min="4" max="20" step="1" value="10">
       <span id="speedValue">1.0×</span>
     </div>
-    <div class="control-group mode-buttons" role="group" aria-label="Scene mode">
-      <button type="button" id="modeDayBtn" class="mode-btn mode-btn-day is-active" aria-pressed="true">Day</button>
-      <button type="button" id="modeNightBtn" class="mode-btn mode-btn-night" aria-pressed="false">Night</button>
-    </div>
+    <select id="modeSelect" class="mode-select" aria-label="Scene mode">
+      <option value="day">Day</option>
+      <option value="night">Night</option>
+    </select>
   </div>
   <p class="hint">Tap the canvas to regenerate</p>
 
@@ -217,8 +221,7 @@
     const speedSlider = document.getElementById('speedSlider');
     const speedValue = document.getElementById('speedValue');
     const controls = document.getElementById('controls');
-    const modeDayBtn = document.getElementById('modeDayBtn');
-    const modeNightBtn = document.getElementById('modeNightBtn');
+    const modeSelect = document.getElementById('modeSelect');
     const colorSchemeMeta = document.getElementById('colorSchemeMeta');
     const themeColorMeta = document.getElementById('themeColorMeta');
 
@@ -289,12 +292,8 @@
       return 'day';
     }
 
-    function syncModeButtonsUi() {
-      const isDay = sceneMode === 'day';
-      modeDayBtn.classList.toggle('is-active', isDay);
-      modeDayBtn.setAttribute('aria-pressed', isDay ? 'true' : 'false');
-      modeNightBtn.classList.toggle('is-active', !isDay);
-      modeNightBtn.setAttribute('aria-pressed', isDay ? 'false' : 'true');
+    function syncModeSelectUi() {
+      modeSelect.value = sceneMode;
     }
 
     function applyPageTheme() {
@@ -304,7 +303,7 @@
       document.body.style.background = theme.themeColor;
       if (themeColorMeta) themeColorMeta.setAttribute('content', theme.themeColor);
       if (colorSchemeMeta) colorSchemeMeta.setAttribute('content', theme.colorScheme);
-      syncModeButtonsUi();
+      syncModeSelectUi();
     }
 
     function applyThemeColorsToConfig(config) {
@@ -965,8 +964,9 @@
       updateSpeedLabel();
     });
 
-    modeDayBtn.addEventListener('click', () => setSceneMode('day'));
-    modeNightBtn.addEventListener('click', () => setSceneMode('night'));
+    modeSelect.addEventListener('change', () => {
+      setSceneMode(modeSelect.value);
+    });
 
     updateSpeedLabel();
 
