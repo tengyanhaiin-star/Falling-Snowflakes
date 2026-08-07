@@ -18,30 +18,22 @@
       height: 100%;
       height: -webkit-fill-available;
       color-scheme: dark;
-      theme-color: #060d18;
-      --theme-chrome-color: #060d18;
       --page-bg: #060d18;
-      --page-gradient: radial-gradient(ellipse at 50% 30%, #1a3050 0%, #0a1628 55%, #060d18 100%);
       --hint-color: rgba(200, 220, 255, 0.4);
       --controls-bg: rgba(10, 22, 40, 0.75);
       --controls-border: rgba(160, 200, 255, 0.18);
       --controls-text: rgba(210, 225, 245, 0.85);
       --controls-accent: #cce8ff;
       --controls-accent-solid: #a8d4ff;
-      background: var(--page-bg);
+      background-color: var(--page-bg);
       touch-action: none;
     }
     html[data-theme="night"] {
       color-scheme: dark;
-      theme-color: #060d18;
-      --theme-chrome-color: #060d18;
     }
     html[data-theme="day"] {
       color-scheme: light;
-      theme-color: #87CEEB;
-      --theme-chrome-color: #87CEEB;
       --page-bg: #87CEEB;
-      --page-gradient: radial-gradient(ellipse at 50% 18%, #8AC6E8 0%, #87CEEB 52%, #6FA3BE 100%);
       --hint-color: rgba(20, 60, 100, 0.5);
       --controls-bg: rgba(255, 255, 255, 0.82);
       --controls-border: rgba(100, 140, 180, 0.25);
@@ -52,9 +44,6 @@
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
     body {
       background-color: var(--page-bg);
-      background-image: var(--page-gradient);
-      background-repeat: no-repeat;
-      background-size: cover;
       min-height: 100%;
       min-height: 100dvh;
       min-height: -webkit-fill-available;
@@ -64,33 +53,7 @@
       -webkit-overflow-scrolling: touch;
       -webkit-tap-highlight-color: transparent;
       touch-action: none;
-    }
-    .backdrop {
-      position: fixed;
-      inset: 0;
-      background-color: var(--theme-chrome-color, var(--page-bg));
-      z-index: 0;
-      pointer-events: none;
-    }
-    /* Safari 26+ 从贴近视口边缘的 fixed 元素 background-color 采样工具栏/地址栏颜色 */
-    .safari-chrome-top,
-    .safari-chrome-bottom {
-      position: fixed;
-      left: 0;
-      right: 0;
-      background-color: var(--theme-chrome-color, var(--page-bg));
-      pointer-events: none;
-      z-index: 2;
-    }
-    .safari-chrome-top {
-      top: 0;
-      height: calc(env(safe-area-inset-top, 0px) + 4px);
-      min-height: 4px;
-    }
-    .safari-chrome-bottom {
-      bottom: 0;
-      height: calc(env(safe-area-inset-bottom, 0px) + 4px);
-      min-height: 4px;
+      transition: background 0.4s ease;
     }
     canvas {
       position: fixed;
@@ -100,7 +63,6 @@
       display: block;
       width: 100%;
       height: 100%;
-      background-color: var(--theme-chrome-color, var(--page-bg));
       cursor: pointer;
       touch-action: none;
     }
@@ -225,9 +187,6 @@
   </style>
 </head>
 <body>
-  <div class="backdrop" aria-hidden="true"></div>
-  <div class="safari-chrome-top" id="safariChromeTop" aria-hidden="true"></div>
-  <div class="safari-chrome-bottom" id="safariChromeBottom" aria-hidden="true"></div>
   <canvas id="canvas"></canvas>
   <div class="controls" id="controls">
     <div class="control-group">
@@ -261,9 +220,7 @@
     const modeDayBtn = document.getElementById('modeDayBtn');
     const modeNightBtn = document.getElementById('modeNightBtn');
     const colorSchemeMeta = document.getElementById('colorSchemeMeta');
-    const safariChromeTop = document.getElementById('safariChromeTop');
-    const safariChromeBottom = document.getElementById('safariChromeBottom');
-    const backdrop = document.querySelector('.backdrop');
+    const themeColorMeta = document.getElementById('themeColorMeta');
 
     const SCENE_MODE_KEY = 'snowflake-scene-mode';
 
@@ -340,43 +297,14 @@
       modeNightBtn.setAttribute('aria-pressed', isDay ? 'false' : 'true');
     }
 
-    function updateThemeColorMeta(color) {
-      let meta = document.getElementById('themeColorMeta');
-      if (meta) meta.remove();
-      meta = document.createElement('meta');
-      meta.name = 'theme-color';
-      meta.id = 'themeColorMeta';
-      meta.content = color;
-      document.head.insertBefore(meta, document.head.firstChild);
-    }
-
-    function paintSafariChromeColor(color) {
-      const targets = [document.documentElement, document.body, backdrop, canvas, safariChromeTop, safariChromeBottom];
-      targets.forEach((el) => {
-        if (el) el.style.backgroundColor = color;
-      });
-    }
-
-    function nudgeSafariChromeRepaint() {
-      requestAnimationFrame(() => {
-        window.dispatchEvent(new Event('resize'));
-      });
-    }
-
     function applyPageTheme() {
       const theme = getTheme();
-      const chromeColor = theme.themeColor;
       document.documentElement.dataset.theme = sceneMode;
       document.documentElement.style.colorScheme = theme.colorScheme;
-      paintSafariChromeColor(chromeColor);
-      updateThemeColorMeta(chromeColor);
+      document.body.style.background = theme.themeColor;
+      if (themeColorMeta) themeColorMeta.setAttribute('content', theme.themeColor);
       if (colorSchemeMeta) colorSchemeMeta.setAttribute('content', theme.colorScheme);
-      const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
-      if (statusBarMeta) {
-        statusBarMeta.setAttribute('content', sceneMode === 'night' ? 'black-translucent' : 'default');
-      }
       syncModeButtonsUi();
-      nudgeSafariChromeRepaint();
     }
 
     function applyThemeColorsToConfig(config) {
