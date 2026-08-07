@@ -28,13 +28,6 @@
       --controls-text: rgba(210, 225, 245, 0.85);
       --controls-accent: #cce8ff;
       --controls-accent-solid: #a8d4ff;
-      --mode-btn-bg: rgba(160, 200, 255, 0.12);
-      --mode-btn-border: rgba(160, 200, 255, 0.28);
-      --mode-btn-hover: rgba(160, 200, 255, 0.22);
-      --select-bg: #1a2d48;
-      --select-fg: #eef6ff;
-      --select-option-bg: #243a58;
-      --select-option-fg: #eef6ff;
       background: var(--page-bg);
       touch-action: none;
     }
@@ -55,13 +48,6 @@
       --controls-text: rgba(40, 65, 95, 0.88);
       --controls-accent: #2a5a8a;
       --controls-accent-solid: #4a8ac8;
-      --mode-btn-bg: rgba(74, 138, 200, 0.12);
-      --mode-btn-border: rgba(74, 138, 200, 0.35);
-      --mode-btn-hover: rgba(74, 138, 200, 0.22);
-      --select-bg: #ffffff;
-      --select-fg: #123456;
-      --select-option-bg: #ffffff;
-      --select-option-fg: #123456;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
     body {
@@ -201,33 +187,39 @@
       font-variant-numeric: tabular-nums;
       color: var(--controls-accent);
     }
-    .controls select.mode-select {
-      padding: 5px 28px 5px 10px;
-      border: 1px solid var(--mode-btn-border);
+    .mode-buttons {
+      gap: 6px;
+    }
+    .mode-btn {
+      padding: 6px 12px;
+      border: 1px solid transparent;
       border-radius: 8px;
-      background-color: var(--select-bg);
-      color: var(--select-fg);
       font-size: 14px;
-      font-family: inherit;
-      line-height: 1.2;
+      line-height: 1;
       cursor: pointer;
       touch-action: manipulation;
-      appearance: auto;
-      -webkit-appearance: menulist;
-      color-scheme: light dark;
+      white-space: nowrap;
+      transition: opacity 0.15s ease, box-shadow 0.15s ease;
     }
-    html[data-theme="day"] .controls select.mode-select {
-      color-scheme: light;
+    .mode-btn-day {
+      background-color: #87CEEB;
+      color: #123456;
+      border-color: #6FA3BE;
     }
-    html[data-theme="night"] .controls select.mode-select {
-      color-scheme: dark;
+    .mode-btn-night {
+      background-color: #060d18;
+      color: #cce8ff;
+      border-color: #1a3050;
     }
-    .controls select.mode-select option {
-      background-color: var(--select-option-bg);
-      color: var(--select-option-fg);
+    .mode-btn.is-active {
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55);
+      opacity: 1;
     }
-    body.landscape-compact .controls select.mode-select {
-      padding: 3px 24px 3px 8px;
+    .mode-btn:not(.is-active) {
+      opacity: 0.72;
+    }
+    body.landscape-compact .mode-btn {
+      padding: 4px 10px;
       font-size: 12px;
     }
   </style>
@@ -248,12 +240,9 @@
       <input type="range" id="speedSlider" min="4" max="20" step="1" value="10">
       <span id="speedValue">1.0×</span>
     </div>
-    <div class="control-group">
-      <label for="modeSelect">Mode</label>
-      <select id="modeSelect" class="mode-select" aria-label="Scene mode">
-        <option value="day">Day</option>
-        <option value="night">Night</option>
-      </select>
+    <div class="control-group mode-buttons" role="group" aria-label="Scene mode">
+      <button type="button" id="modeDayBtn" class="mode-btn mode-btn-day is-active" aria-pressed="true">Day</button>
+      <button type="button" id="modeNightBtn" class="mode-btn mode-btn-night" aria-pressed="false">Night</button>
     </div>
   </div>
   <p class="hint">Tap the canvas to regenerate</p>
@@ -269,7 +258,8 @@
     const speedSlider = document.getElementById('speedSlider');
     const speedValue = document.getElementById('speedValue');
     const controls = document.getElementById('controls');
-    const modeSelect = document.getElementById('modeSelect');
+    const modeDayBtn = document.getElementById('modeDayBtn');
+    const modeNightBtn = document.getElementById('modeNightBtn');
     const colorSchemeMeta = document.getElementById('colorSchemeMeta');
     const safariChromeTop = document.getElementById('safariChromeTop');
     const safariChromeBottom = document.getElementById('safariChromeBottom');
@@ -342,8 +332,12 @@
       return 'day';
     }
 
-    function syncModeSelectUi() {
-      modeSelect.value = sceneMode;
+    function syncModeButtonsUi() {
+      const isDay = sceneMode === 'day';
+      modeDayBtn.classList.toggle('is-active', isDay);
+      modeDayBtn.setAttribute('aria-pressed', isDay ? 'true' : 'false');
+      modeNightBtn.classList.toggle('is-active', !isDay);
+      modeNightBtn.setAttribute('aria-pressed', isDay ? 'false' : 'true');
     }
 
     function updateThemeColorMeta(color) {
@@ -381,7 +375,7 @@
       if (statusBarMeta) {
         statusBarMeta.setAttribute('content', sceneMode === 'night' ? 'black-translucent' : 'default');
       }
-      syncModeSelectUi();
+      syncModeButtonsUi();
       nudgeSafariChromeRepaint();
     }
 
@@ -1043,9 +1037,8 @@
       updateSpeedLabel();
     });
 
-    modeSelect.addEventListener('change', () => {
-      setSceneMode(modeSelect.value);
-    });
+    modeDayBtn.addEventListener('click', () => setSceneMode('day'));
+    modeNightBtn.addEventListener('click', () => setSceneMode('night'));
 
     updateSpeedLabel();
 
