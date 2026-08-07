@@ -6,7 +6,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#87CEEB" id="themeColorMeta">
-  <meta name="color-scheme" content="light" id="colorSchemeMeta">
   <meta name="format-detection" content="telephone=no">
   <title>Koch Snowflake</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,9 +32,6 @@
       --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%23eef6ff' d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
       background-color: var(--page-bg);
       touch-action: none;
-    }
-    html[data-theme="night"] {
-      color-scheme: dark;
     }
     html[data-theme="day"] {
       color-scheme: light;
@@ -178,7 +174,6 @@
       touch-action: manipulation;
       appearance: none;
       -webkit-appearance: none;
-      color-scheme: light dark;
     }
     html[data-theme="day"] .controls select.mode-select {
       color-scheme: light;
@@ -229,7 +224,6 @@
     const speedValue = document.getElementById('speedValue');
     const controls = document.getElementById('controls');
     const modeSelect = document.getElementById('modeSelect');
-    const colorSchemeMeta = document.getElementById('colorSchemeMeta');
     const themeColorMeta = document.getElementById('themeColorMeta');
 
     const SCENE_MODE_KEY = 'snowflake-scene-mode';
@@ -309,7 +303,6 @@
       document.documentElement.style.colorScheme = theme.colorScheme;
       document.body.style.background = theme.themeColor;
       if (themeColorMeta) themeColorMeta.setAttribute('content', theme.themeColor);
-      if (colorSchemeMeta) colorSchemeMeta.setAttribute('content', theme.colorScheme);
       syncModeSelectUi();
     }
 
@@ -340,8 +333,6 @@
 
     const KOCH_DEPTH = 4;
     const RING_COUNT = 2;
-    // 无分叉时半臂点数为 3^depth + 1；depth=4 → 82，结构性地恒 >= 30
-    const MIN_HALF_ARM_POINTS = 3 ** KOCH_DEPTH + 1;
     let flakeCount = 12;
     let fallSpeed = 1.0;
     let viewWidth = window.innerWidth;
@@ -373,15 +364,18 @@
       canvas.height = Math.max(1, Math.round(viewHeight * dpr));
       canvas.style.width = `${viewWidth}px`;
       canvas.style.height = `${viewHeight}px`;
-      canvas.style.transform = '';
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       layoutUiChrome();
     }
-    resize();
-    window.addEventListener('resize', () => {
+
+    function handleViewportChange(regenerateFlakes = false) {
       resize();
       initDistantSnow();
+      if (regenerateFlakes) {
+        regenerate();
+        return;
+      }
       if (viewWidth > 0 && viewHeight > 0) {
         if (snowflakes.length === 0) {
           try {
@@ -392,27 +386,15 @@
         }
         draw();
       }
-    });
+    }
+
+    resize();
+    window.addEventListener('resize', () => handleViewportChange(false));
     window.addEventListener('orientationchange', () => {
-      setTimeout(() => {
-        resize();
-        initDistantSnow();
-        regenerate();
-      }, 250);
+      setTimeout(() => handleViewportChange(true), 250);
     });
     if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', () => {
-        resize();
-        initDistantSnow();
-        if (snowflakes.length === 0 && viewWidth > 0 && viewHeight > 0) {
-          try {
-            snowflakes = generateSnowflakes();
-          } catch (err) {
-            console.error('Snowflake generation failed:', err);
-          }
-        }
-        draw();
-      });
+      window.visualViewport.addEventListener('resize', () => handleViewportChange(false));
       window.visualViewport.addEventListener('scroll', layoutUiChrome);
     }
 
@@ -496,7 +478,6 @@
       } = style;
       const pts = [[x1, y1]];
       let bumpedD4 = false;
-      let bumpedD3Outermost = false;
 
       function recurse(ax, ay, bx, by, d, onOutermostSpine) {
         if (d === 0) {
@@ -524,7 +505,6 @@
 
         if (doBump) {
           if (d === 4) bumpedD4 = true;
-          if (d === 3 && onOutermostSpine) bumpedD3Outermost = true;
           const angle = Math.atan2(dy, dx);
           const segLen = (Math.hypot(dx, dy) / 3) * bumpScale;
           const bumpAngle = angle + bumpSign * Math.PI / 3;
@@ -540,7 +520,7 @@
       }
 
       recurse(x1, y1, x2, y2, depth, false);
-      return { points: pts, bumpedD4, bumpedD3Outermost };
+      return { points: pts, bumpedD4 };
     }
 
     function collectHalfArmKoch(radius, armDepth, style) {
@@ -717,11 +697,10 @@
     function bakeFlakeBitmap(flake) {
       const bounds = flakeBoundsRadius(flake.radius, flake.config);
       const half = Math.ceil(bounds * 1.15);
-      const size = half * 2;
 
       const oc = document.createElement('canvas');
-      oc.width = size;
-      oc.height = size;
+      oc.width = half * 2;
+      oc.height = half * 2;
       const octx = oc.getContext('2d');
       octx.translate(half, half);
       renderSnowflakeContent(octx, flake.radius, flake.config, flake.geometry);
