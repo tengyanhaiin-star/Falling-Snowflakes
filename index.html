@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#060d18">
-  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#060d18" id="themeColorMeta">
+  <meta name="color-scheme" content="dark" id="colorSchemeMeta">
   <meta name="format-detection" content="telephone=no">
   <title>Koch Snowflake</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,13 +18,38 @@
       height: 100%;
       height: -webkit-fill-available;
       color-scheme: dark;
-      background: #060d18;
+      --page-bg: #060d18;
+      --page-gradient: radial-gradient(ellipse at 50% 30%, #1a3050 0%, #0a1628 55%, #060d18 100%);
+      --hint-color: rgba(200, 220, 255, 0.4);
+      --controls-bg: rgba(10, 22, 40, 0.75);
+      --controls-border: rgba(160, 200, 255, 0.18);
+      --controls-text: rgba(210, 225, 245, 0.85);
+      --controls-accent: #cce8ff;
+      --controls-accent-solid: #a8d4ff;
+      --mode-btn-bg: rgba(160, 200, 255, 0.12);
+      --mode-btn-border: rgba(160, 200, 255, 0.28);
+      --mode-btn-hover: rgba(160, 200, 255, 0.22);
+      background: var(--page-bg);
       touch-action: none;
+    }
+    html[data-theme="day"] {
+      color-scheme: light;
+      --page-bg: #e4eef6;
+      --page-gradient: radial-gradient(ellipse at 50% 25%, #ffffff 0%, #e8f2fa 45%, #c5d9eb 100%);
+      --hint-color: rgba(60, 90, 120, 0.45);
+      --controls-bg: rgba(255, 255, 255, 0.82);
+      --controls-border: rgba(100, 140, 180, 0.25);
+      --controls-text: rgba(40, 65, 95, 0.88);
+      --controls-accent: #2a5a8a;
+      --controls-accent-solid: #4a8ac8;
+      --mode-btn-bg: rgba(74, 138, 200, 0.12);
+      --mode-btn-border: rgba(74, 138, 200, 0.35);
+      --mode-btn-hover: rgba(74, 138, 200, 0.22);
     }
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
     body {
-      background-color: #060d18;
-      background-image: radial-gradient(ellipse at 50% 30%, #1a3050 0%, #0a1628 55%, #060d18 100%);
+      background-color: var(--page-bg);
+      background-image: var(--page-gradient);
       background-repeat: no-repeat;
       background-size: cover;
       min-height: 100%;
@@ -40,7 +65,7 @@
     .backdrop {
       position: fixed;
       inset: 0;
-      background: #060d18;
+      background: var(--page-bg);
       z-index: 0;
       pointer-events: none;
     }
@@ -63,7 +88,7 @@
       bottom: calc(8px + var(--ui-bottom-gap, 0px) + env(safe-area-inset-bottom, 0px));
       width: max-content;
       max-width: calc(100vw - 32px);
-      color: rgba(200, 220, 255, 0.4);
+      color: var(--hint-color);
       font-size: clamp(12px, 3.4vw, 14px);
       letter-spacing: 0.2px;
       line-height: 1;
@@ -89,12 +114,12 @@
       padding: 10px 18px;
       padding-left: calc(18px + env(safe-area-inset-left, 0px));
       padding-right: calc(18px + env(safe-area-inset-right, 0px));
-      background: rgba(10, 22, 40, 0.75);
-      border: 1px solid rgba(160, 200, 255, 0.18);
+      background: var(--controls-bg);
+      border: 1px solid var(--controls-border);
       border-radius: 10px;
       -webkit-backdrop-filter: blur(8px);
       backdrop-filter: blur(8px);
-      color: rgba(210, 225, 245, 0.85);
+      color: var(--controls-text);
       font-size: 14px;
       user-select: none;
       -webkit-user-select: none;
@@ -127,7 +152,7 @@
     }
     .controls input[type="range"] {
       width: min(160px, 36vw);
-      accent-color: #a8d4ff;
+      accent-color: var(--controls-accent-solid);
       cursor: pointer;
       touch-action: pan-x;
     }
@@ -136,7 +161,27 @@
       min-width: 1.2em;
       text-align: center;
       font-variant-numeric: tabular-nums;
-      color: #cce8ff;
+      color: var(--controls-accent);
+    }
+    .mode-toggle {
+      padding: 6px 12px;
+      border: 1px solid var(--mode-btn-border);
+      border-radius: 8px;
+      background: var(--mode-btn-bg);
+      color: var(--controls-accent);
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+      touch-action: manipulation;
+      white-space: nowrap;
+      transition: background 0.15s ease;
+    }
+    .mode-toggle:hover {
+      background: var(--mode-btn-hover);
+    }
+    body.landscape-compact .mode-toggle {
+      padding: 4px 10px;
+      font-size: 12px;
     }
   </style>
 </head>
@@ -154,6 +199,7 @@
       <input type="range" id="speedSlider" min="4" max="20" step="1" value="10">
       <span id="speedValue">1.0×</span>
     </div>
+    <button type="button" id="modeToggle" class="mode-toggle" aria-pressed="false" aria-label="Switch to day mode">Day</button>
   </div>
   <p class="hint">Tap the canvas to regenerate</p>
 
@@ -168,6 +214,118 @@
     const speedSlider = document.getElementById('speedSlider');
     const speedValue = document.getElementById('speedValue');
     const controls = document.getElementById('controls');
+    const modeToggle = document.getElementById('modeToggle');
+    const themeColorMeta = document.getElementById('themeColorMeta');
+    const colorSchemeMeta = document.getElementById('colorSchemeMeta');
+
+    const SCENE_MODE_KEY = 'snowflake-scene-mode';
+
+    const THEMES = {
+      night: {
+        themeColor: '#060d18',
+        colorScheme: 'dark',
+        canvasBg: ['#1a3050', '#0a1628', '#060d18'],
+        distantSnowRgb: [210, 225, 245],
+        distantAlpha: [0.1, 0.32],
+        flake: {
+          hue: [185, 225],
+          lightness: [86, 98],
+          alpha: [0.72, 0.95],
+        },
+        snowflakePalette(hue, lightness, alpha) {
+          return {
+            glow: [[0, 55, 92, alpha * 0.22], [0.55, 60, 85, alpha * 0.08], [1, 70, 75, 0]],
+            body: [[0, 35, lightness, alpha * 0.10], [0.35, 45, 94, alpha * 0.17], [0.75, 55, 88, alpha * 0.37], [1, 65, 82, alpha * 0.50]],
+            core: [[0, 20, 99, alpha * 0.10], [1, 40, 92, alpha * 0.10]],
+            ring: [[0, 40, 93, alpha * 0.10], [1, 55, 86, alpha * 0.17]],
+            stroke: [hue, 30, 98, alpha * 0.50],
+          };
+        },
+      },
+      day: {
+        themeColor: '#d8e8f4',
+        colorScheme: 'light',
+        canvasBg: ['#ffffff', '#e8f2fa', '#c5d9eb'],
+        distantSnowRgb: [95, 120, 150],
+        distantAlpha: [0.18, 0.42],
+        flake: {
+          hue: [195, 215],
+          lightness: [58, 72],
+          alpha: [0.52, 0.78],
+        },
+        snowflakePalette(hue, lightness, alpha) {
+          return {
+            glow: [[0, 35, 85, alpha * 0.08], [0.55, 40, 70, alpha * 0.04], [1, 45, 55, 0]],
+            body: [[0, 30, lightness, alpha * 0.18], [0.35, 40, 58, alpha * 0.28], [0.75, 45, 48, alpha * 0.42], [1, 50, 42, alpha * 0.55]],
+            core: [[0, 25, 75, alpha * 0.15], [1, 35, 55, alpha * 0.22]],
+            ring: [[0, 35, 65, alpha * 0.12], [1, 45, 50, alpha * 0.20]],
+            stroke: [hue, 42, 32, alpha * 0.72],
+          };
+        },
+      },
+    };
+
+    let sceneMode = 'night';
+
+    function getTheme() {
+      return THEMES[sceneMode];
+    }
+
+    function hsla(h, s, l, a) {
+      return `hsla(${h}, ${s}%, ${l}%, ${a})`;
+    }
+
+    function addGradientStops(grad, stops) {
+      stops.forEach(([pos, h, s, l, a]) => grad.addColorStop(pos, hsla(h, s, l, a)));
+    }
+
+    function loadSceneMode() {
+      try {
+        const saved = localStorage.getItem(SCENE_MODE_KEY);
+        if (saved === 'day' || saved === 'night') return saved;
+      } catch (_) { /* ignore */ }
+      return 'night';
+    }
+
+    function updateModeToggleUi() {
+      const isDay = sceneMode === 'day';
+      modeToggle.textContent = isDay ? 'Night' : 'Day';
+      modeToggle.setAttribute('aria-pressed', isDay ? 'true' : 'false');
+      modeToggle.setAttribute('aria-label', isDay ? 'Switch to night mode' : 'Switch to day mode');
+    }
+
+    function applyPageTheme() {
+      const theme = getTheme();
+      document.documentElement.dataset.theme = sceneMode;
+      if (themeColorMeta) themeColorMeta.content = theme.themeColor;
+      if (colorSchemeMeta) colorSchemeMeta.content = theme.colorScheme;
+      updateModeToggleUi();
+    }
+
+    function applyThemeColorsToConfig(config) {
+      const f = getTheme().flake;
+      config.hue = rand(f.hue[0], f.hue[1]);
+      config.lightness = rand(f.lightness[0], f.lightness[1]);
+      config.alpha = rand(f.alpha[0], f.alpha[1]);
+    }
+
+    function setSceneMode(mode) {
+      if (mode !== 'night' && mode !== 'day') return;
+      sceneMode = mode;
+      try {
+        localStorage.setItem(SCENE_MODE_KEY, mode);
+      } catch (_) { /* ignore */ }
+      applyPageTheme();
+      snowflakes.forEach((f) => {
+        applyThemeColorsToConfig(f.config);
+        bakeFlakeBitmap(f);
+      });
+      initDistantSnow();
+      draw();
+    }
+
+    sceneMode = loadSceneMode();
+    applyPageTheme();
 
     const KOCH_DEPTH = 4;
     const RING_COUNT = 2;
@@ -509,40 +667,35 @@
     function renderSnowflakeContent(c, radius, config, geometry) {
       const { hue, lightness, alpha } = config;
       const { segments, armFills, rings } = geometry;
+      const palette = getTheme().snowflakePalette(hue, lightness, alpha);
 
       const glow = c.createRadialGradient(0, 0, 0, 0, 0, radius * 1.35);
-      glow.addColorStop(0, `hsla(${hue}, 55%, 92%, ${alpha * 0.22})`);
-      glow.addColorStop(0.55, `hsla(${hue}, 60%, 85%, ${alpha * 0.08})`);
-      glow.addColorStop(1, `hsla(${hue}, 70%, 75%, 0)`);
+      addGradientStops(glow, palette.glow);
       c.fillStyle = glow;
       c.beginPath();
       c.arc(0, 0, radius * 1.35, 0, Math.PI * 2);
       c.fill();
 
       const bodyGrad = c.createRadialGradient(0, 0, 0, 0, 0, radius * 1.05);
-      bodyGrad.addColorStop(0, `hsla(${hue}, 35%, ${lightness}%, ${alpha * 0.10})`);
-      bodyGrad.addColorStop(0.35, `hsla(${hue}, 45%, 94%, ${alpha * 0.17})`);
-      bodyGrad.addColorStop(0.75, `hsla(${hue}, 55%, 88%, ${alpha * 0.37})`);
-      bodyGrad.addColorStop(1, `hsla(${hue}, 65%, 82%, ${alpha * 0.50})`);
+      addGradientStops(bodyGrad, palette.body);
       c.fillStyle = bodyGrad;
       armFills.forEach((pts) => fillPolygon(c, pts));
 
       if (rings.length >= 1) {
         const coreGrad = c.createRadialGradient(0, 0, 0, 0, 0, rings[0] * 1.2);
-        coreGrad.addColorStop(0, `hsla(${hue}, 20%, 99%, ${alpha * 0.10})`);
-        coreGrad.addColorStop(1, `hsla(${hue}, 40%, 92%, ${alpha * 0.10})`);
+        addGradientStops(coreGrad, palette.core);
         c.fillStyle = coreGrad;
         fillPolygon(c, flatTopHexVertices(rings[0]));
       }
       for (let i = 1; i < rings.length; i++) {
         const ringGrad = c.createRadialGradient(0, 0, rings[i - 1], 0, 0, rings[i] * 1.05);
-        ringGrad.addColorStop(0, `hsla(${hue}, 40%, 93%, ${alpha * 0.10})`);
-        ringGrad.addColorStop(1, `hsla(${hue}, 55%, 86%, ${alpha * 0.17})`);
+        addGradientStops(ringGrad, palette.ring);
         c.fillStyle = ringGrad;
         fillHexAnnulus(c, rings[i - 1], rings[i]);
       }
 
-      c.strokeStyle = `hsla(${hue}, 30%, 98%, ${alpha * 0.50})`;
+      const [sh, ss, sl, sa] = palette.stroke;
+      c.strokeStyle = hsla(sh, ss, sl, sa);
       c.lineWidth = config.lineWidth * radius;
       c.lineCap = 'round';
       c.lineJoin = 'round';
@@ -589,15 +742,16 @@
 
     function randomConfig(isMain, usedSeeds) {
       const seed = uniqueSeed(usedSeeds);
+      const f = getTheme().flake;
       return {
         armDepth: KOCH_DEPTH,
         ringCount: RING_COUNT,
         kochStyle: createKochStyle(seed),
         // 描边宽度 = lineWidth × radius（相对半径的比例，大屏/大雪花同比例更粗）
         lineWidth: isMain ? rand(0.009, 0.014) : rand(0.005, 0.009),
-        hue: rand(185, 225),
-        lightness: rand(86, 98),
-        alpha: rand(0.72, 0.95),
+        hue: rand(f.hue[0], f.hue[1]),
+        lightness: rand(f.lightness[0], f.lightness[1]),
+        alpha: rand(f.alpha[0], f.alpha[1]),
       };
     }
 
@@ -663,11 +817,14 @@
       const w = viewWidth;
       const h = viewHeight;
       const speedScale = distantSnowSpeedScale();
+      const theme = getTheme();
+      const [r, g, b] = theme.distantSnowRgb;
       return {
         x: Math.random() * w,
         y: Math.random() * (h + 50) - 50,
         r: rand(0.35, 1.25),
-        alpha: rand(0.1, 0.32),
+        rgb: [r, g, b],
+        alpha: rand(theme.distantAlpha[0], theme.distantAlpha[1]),
         vy: rand(0.06, 0.18) * speedScale,
         vx: rand(-0.015, 0.015) * speedScale,
       };
@@ -696,7 +853,8 @@
 
     function drawDistantSnow() {
       distantSnow.forEach((p) => {
-        ctx.fillStyle = `rgba(210, 225, 245, ${p.alpha})`;
+        const [r, g, b] = p.rgb;
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${p.alpha})`;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fill();
@@ -729,10 +887,11 @@
       const cx = viewWidth * 0.5;
       const cy = viewHeight * 0.3;
       const r = Math.max(viewWidth, viewHeight);
+      const [c0, c1, c2] = getTheme().canvasBg;
       const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      bg.addColorStop(0, '#1a3050');
-      bg.addColorStop(0.55, '#0a1628');
-      bg.addColorStop(1, '#060d18');
+      bg.addColorStop(0, c0);
+      bg.addColorStop(0.55, c1);
+      bg.addColorStop(1, c2);
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, viewWidth, viewHeight);
     }
@@ -806,6 +965,10 @@
     speedSlider.addEventListener('input', () => {
       fallSpeed = parseInt(speedSlider.value, 10) / 10;
       updateSpeedLabel();
+    });
+
+    modeToggle.addEventListener('click', () => {
+      setSceneMode(sceneMode === 'night' ? 'day' : 'night');
     });
 
     updateSpeedLabel();
