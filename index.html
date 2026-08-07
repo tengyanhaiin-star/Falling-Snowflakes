@@ -520,41 +520,33 @@
       c.fill();
 
       const bodyGrad = c.createRadialGradient(0, 0, 0, 0, 0, radius * 1.05);
-      bodyGrad.addColorStop(0, `hsla(${hue}, 35%, ${lightness}%, ${alpha * 0.62})`);
-      bodyGrad.addColorStop(0.35, `hsla(${hue}, 45%, 94%, ${alpha * 0.42})`);
-      bodyGrad.addColorStop(0.75, `hsla(${hue}, 55%, 88%, ${alpha * 0.22})`);
-      bodyGrad.addColorStop(1, `hsla(${hue}, 65%, 82%, ${alpha * 0.06})`);
+      bodyGrad.addColorStop(0, `hsla(${hue}, 35%, ${lightness}%, ${alpha * 0.10})`);
+      bodyGrad.addColorStop(0.35, `hsla(${hue}, 45%, 94%, ${alpha * 0.17})`);
+      bodyGrad.addColorStop(0.75, `hsla(${hue}, 55%, 88%, ${alpha * 0.37})`);
+      bodyGrad.addColorStop(1, `hsla(${hue}, 65%, 82%, ${alpha * 0.50})`);
       c.fillStyle = bodyGrad;
       armFills.forEach((pts) => fillPolygon(c, pts));
 
       if (rings.length >= 1) {
         const coreGrad = c.createRadialGradient(0, 0, 0, 0, 0, rings[0] * 1.2);
-        coreGrad.addColorStop(0, `hsla(${hue}, 20%, 99%, ${alpha * 0.85})`);
-        coreGrad.addColorStop(1, `hsla(${hue}, 40%, 92%, ${alpha * 0.45})`);
+        coreGrad.addColorStop(0, `hsla(${hue}, 20%, 99%, ${alpha * 0.10})`);
+        coreGrad.addColorStop(1, `hsla(${hue}, 40%, 92%, ${alpha * 0.10})`);
         c.fillStyle = coreGrad;
         fillPolygon(c, flatTopHexVertices(rings[0]));
       }
       for (let i = 1; i < rings.length; i++) {
         const ringGrad = c.createRadialGradient(0, 0, rings[i - 1], 0, 0, rings[i] * 1.05);
-        ringGrad.addColorStop(0, `hsla(${hue}, 40%, 93%, ${alpha * 0.35})`);
-        ringGrad.addColorStop(1, `hsla(${hue}, 55%, 86%, ${alpha * 0.12})`);
+        ringGrad.addColorStop(0, `hsla(${hue}, 40%, 93%, ${alpha * 0.10})`);
+        ringGrad.addColorStop(1, `hsla(${hue}, 55%, 86%, ${alpha * 0.17})`);
         c.fillStyle = ringGrad;
         fillHexAnnulus(c, rings[i - 1], rings[i]);
       }
 
-      c.strokeStyle = `hsla(${hue}, 30%, 98%, ${alpha * 0.75})`;
+      c.strokeStyle = `hsla(${hue}, 30%, 98%, ${alpha * 0.50})`;
       c.lineWidth = config.lineWidth * radius;
       c.lineCap = 'round';
       c.lineJoin = 'round';
       segments.forEach((pts) => strokePolyline(c, pts));
-
-      const highlight = c.createRadialGradient(0, 0, 0, 0, 0, radius * 0.06);
-      highlight.addColorStop(0, `hsla(${hue}, 10%, 100%, ${alpha * 0.95})`);
-      highlight.addColorStop(1, `hsla(${hue}, 30%, 95%, 0)`);
-      c.fillStyle = highlight;
-      c.beginPath();
-      c.arc(0, 0, radius * 0.06, 0, Math.PI * 2);
-      c.fill();
     }
 
     /** 估算雪花占用半径（含 Koch 侧枝与线宽） */
