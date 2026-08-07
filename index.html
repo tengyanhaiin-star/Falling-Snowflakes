@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#b5d4e6" id="themeColorMeta">
+  <meta name="theme-color" content="#87CEEB" id="themeColorMeta">
   <meta name="color-scheme" content="light" id="colorSchemeMeta">
   <meta name="format-detection" content="telephone=no">
   <title>Koch Snowflake</title>
@@ -36,10 +36,13 @@
       background: var(--page-bg);
       touch-action: none;
     }
+    html[data-theme="night"] {
+      color-scheme: dark;
+    }
     html[data-theme="day"] {
       color-scheme: light;
-      --page-bg: #b5d4e6;
-      --page-gradient: radial-gradient(ellipse at 50% 18%, #bdd4e3 0%, #b5d4e6 52%, #94bdd4 100%);
+      --page-bg: #87CEEB;
+      --page-gradient: radial-gradient(ellipse at 50% 18%, #8AC6E8 0%, #87CEEB 52%, #6FA3BE 100%);
       --hint-color: rgba(20, 60, 100, 0.5);
       --controls-bg: rgba(255, 255, 255, 0.82);
       --controls-border: rgba(100, 140, 180, 0.25);
@@ -238,7 +241,6 @@
     const speedValue = document.getElementById('speedValue');
     const controls = document.getElementById('controls');
     const modeSelect = document.getElementById('modeSelect');
-    const themeColorMeta = document.getElementById('themeColorMeta');
     const colorSchemeMeta = document.getElementById('colorSchemeMeta');
 
     const SCENE_MODE_KEY = 'snowflake-scene-mode';
@@ -257,7 +259,6 @@
         },
         snowflakePalette(hue, lightness, alpha) {
           return {
-            glow: [[0, hue, 55, 92, alpha * 0.22], [0.55, hue, 60, 85, alpha * 0.08], [1, hue, 70, 75, 0]],
             body: [[0, hue, 35, lightness, alpha * 0.10], [0.35, hue, 45, 94, alpha * 0.17], [0.75, hue, 55, 88, alpha * 0.37], [1, hue, 65, 82, alpha * 0.50]],
             core: [[0, hue, 20, 99, alpha * 0.10], [1, hue, 40, 92, alpha * 0.10]],
             ring: [[0, hue, 40, 93, alpha * 0.10], [1, hue, 55, 86, alpha * 0.17]],
@@ -266,9 +267,9 @@
         },
       },
       day: {
-        themeColor: '#b5d4e6',
+        themeColor: '#87CEEB',
         colorScheme: 'light',
-        canvasBg: ['#bdd4e3', '#b5d4e6', '#94bdd4'],
+        canvasBg: ['#8AC6E8', '#87CEEB', '#6FA3BE'],
         distantSnowRgb: [255, 255, 255],
         distantAlpha: [0.35, 0.7],
         flake: {
@@ -278,7 +279,6 @@
         },
         snowflakePalette(hue, lightness, alpha) {
           return {
-            glow: [[0, 0, 0, 99, alpha * 0.14], [0.55, 0, 0, 98, alpha * 0.07], [1, 0, 0, 96, 0]],
             body: [[0, 0, 0, lightness, alpha * 0.28], [0.35, 0, 0, 99, alpha * 0.40], [0.75, 0, 0, 98, alpha * 0.50], [1, 0, 0, 97, alpha * 0.58]],
             core: [[0, 0, 0, 99, alpha * 0.24], [1, 0, 0, 98, alpha * 0.32]],
             ring: [[0, 0, 0, 99, alpha * 0.20], [1, 0, 0, 97, alpha * 0.28]],
@@ -314,11 +314,28 @@
       modeSelect.value = sceneMode;
     }
 
+    function updateThemeColorMeta(color) {
+      let meta = document.getElementById('themeColorMeta');
+      if (meta) meta.remove();
+      meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      meta.id = 'themeColorMeta';
+      meta.content = color;
+      document.head.appendChild(meta);
+    }
+
     function applyPageTheme() {
       const theme = getTheme();
       document.documentElement.dataset.theme = sceneMode;
-      if (themeColorMeta) themeColorMeta.content = theme.themeColor;
-      if (colorSchemeMeta) colorSchemeMeta.content = theme.colorScheme;
+      document.documentElement.style.colorScheme = theme.colorScheme;
+      document.documentElement.style.backgroundColor = theme.themeColor;
+      document.body.style.backgroundColor = theme.themeColor;
+      updateThemeColorMeta(theme.themeColor);
+      if (colorSchemeMeta) colorSchemeMeta.setAttribute('content', theme.colorScheme);
+      const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+      if (statusBarMeta) {
+        statusBarMeta.setAttribute('content', sceneMode === 'night' ? 'black-translucent' : 'default');
+      }
       syncModeSelectUi();
     }
 
@@ -688,13 +705,6 @@
       const { hue, lightness, alpha } = config;
       const { segments, armFills, rings } = geometry;
       const palette = getTheme().snowflakePalette(hue, lightness, alpha);
-
-      const glow = c.createRadialGradient(0, 0, 0, 0, 0, radius * 1.35);
-      addGradientStops(glow, palette.glow);
-      c.fillStyle = glow;
-      c.beginPath();
-      c.arc(0, 0, radius * 1.35, 0, Math.PI * 2);
-      c.fill();
 
       const bodyGrad = c.createRadialGradient(0, 0, 0, 0, 0, radius * 1.05);
       addGradientStops(bodyGrad, palette.body);
