@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="day">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#060d18" id="themeColorMeta">
-  <meta name="color-scheme" content="dark" id="colorSchemeMeta">
+  <meta name="theme-color" content="#b5d4e6" id="themeColorMeta">
+  <meta name="color-scheme" content="light" id="colorSchemeMeta">
   <meta name="format-detection" content="telephone=no">
   <title>Koch Snowflake</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -29,14 +29,18 @@
       --mode-btn-bg: rgba(160, 200, 255, 0.12);
       --mode-btn-border: rgba(160, 200, 255, 0.28);
       --mode-btn-hover: rgba(160, 200, 255, 0.22);
+      --select-bg: #1a2d48;
+      --select-fg: #eef6ff;
+      --select-option-bg: #243a58;
+      --select-option-fg: #eef6ff;
       background: var(--page-bg);
       touch-action: none;
     }
     html[data-theme="day"] {
       color-scheme: light;
-      --page-bg: #e4eef6;
-      --page-gradient: radial-gradient(ellipse at 50% 25%, #ffffff 0%, #e8f2fa 45%, #c5d9eb 100%);
-      --hint-color: rgba(60, 90, 120, 0.45);
+      --page-bg: #b5d4e6;
+      --page-gradient: radial-gradient(ellipse at 50% 18%, #bdd4e3 0%, #b5d4e6 52%, #94bdd4 100%);
+      --hint-color: rgba(20, 60, 100, 0.5);
       --controls-bg: rgba(255, 255, 255, 0.82);
       --controls-border: rgba(100, 140, 180, 0.25);
       --controls-text: rgba(40, 65, 95, 0.88);
@@ -45,6 +49,10 @@
       --mode-btn-bg: rgba(74, 138, 200, 0.12);
       --mode-btn-border: rgba(74, 138, 200, 0.35);
       --mode-btn-hover: rgba(74, 138, 200, 0.22);
+      --select-bg: #ffffff;
+      --select-fg: #123456;
+      --select-option-bg: #ffffff;
+      --select-option-fg: #123456;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
     body {
@@ -163,24 +171,33 @@
       font-variant-numeric: tabular-nums;
       color: var(--controls-accent);
     }
-    .mode-toggle {
-      padding: 6px 12px;
+    .controls select.mode-select {
+      padding: 5px 28px 5px 10px;
       border: 1px solid var(--mode-btn-border);
       border-radius: 8px;
-      background: var(--mode-btn-bg);
-      color: var(--controls-accent);
+      background-color: var(--select-bg);
+      color: var(--select-fg);
       font-size: 14px;
-      line-height: 1;
+      font-family: inherit;
+      line-height: 1.2;
       cursor: pointer;
       touch-action: manipulation;
-      white-space: nowrap;
-      transition: background 0.15s ease;
+      appearance: auto;
+      -webkit-appearance: menulist;
+      color-scheme: light dark;
     }
-    .mode-toggle:hover {
-      background: var(--mode-btn-hover);
+    html[data-theme="day"] .controls select.mode-select {
+      color-scheme: light;
     }
-    body.landscape-compact .mode-toggle {
-      padding: 4px 10px;
+    html[data-theme="night"] .controls select.mode-select {
+      color-scheme: dark;
+    }
+    .controls select.mode-select option {
+      background-color: var(--select-option-bg);
+      color: var(--select-option-fg);
+    }
+    body.landscape-compact .controls select.mode-select {
+      padding: 3px 24px 3px 8px;
       font-size: 12px;
     }
   </style>
@@ -199,7 +216,13 @@
       <input type="range" id="speedSlider" min="4" max="20" step="1" value="10">
       <span id="speedValue">1.0×</span>
     </div>
-    <button type="button" id="modeToggle" class="mode-toggle" aria-pressed="false" aria-label="Switch to day mode">Day</button>
+    <div class="control-group">
+      <label for="modeSelect">Mode</label>
+      <select id="modeSelect" class="mode-select" aria-label="Scene mode">
+        <option value="day">Day</option>
+        <option value="night">Night</option>
+      </select>
+    </div>
   </div>
   <p class="hint">Tap the canvas to regenerate</p>
 
@@ -214,7 +237,7 @@
     const speedSlider = document.getElementById('speedSlider');
     const speedValue = document.getElementById('speedValue');
     const controls = document.getElementById('controls');
-    const modeToggle = document.getElementById('modeToggle');
+    const modeSelect = document.getElementById('modeSelect');
     const themeColorMeta = document.getElementById('themeColorMeta');
     const colorSchemeMeta = document.getElementById('colorSchemeMeta');
 
@@ -234,38 +257,38 @@
         },
         snowflakePalette(hue, lightness, alpha) {
           return {
-            glow: [[0, 55, 92, alpha * 0.22], [0.55, 60, 85, alpha * 0.08], [1, 70, 75, 0]],
-            body: [[0, 35, lightness, alpha * 0.10], [0.35, 45, 94, alpha * 0.17], [0.75, 55, 88, alpha * 0.37], [1, 65, 82, alpha * 0.50]],
-            core: [[0, 20, 99, alpha * 0.10], [1, 40, 92, alpha * 0.10]],
-            ring: [[0, 40, 93, alpha * 0.10], [1, 55, 86, alpha * 0.17]],
+            glow: [[0, hue, 55, 92, alpha * 0.22], [0.55, hue, 60, 85, alpha * 0.08], [1, hue, 70, 75, 0]],
+            body: [[0, hue, 35, lightness, alpha * 0.10], [0.35, hue, 45, 94, alpha * 0.17], [0.75, hue, 55, 88, alpha * 0.37], [1, hue, 65, 82, alpha * 0.50]],
+            core: [[0, hue, 20, 99, alpha * 0.10], [1, hue, 40, 92, alpha * 0.10]],
+            ring: [[0, hue, 40, 93, alpha * 0.10], [1, hue, 55, 86, alpha * 0.17]],
             stroke: [hue, 30, 98, alpha * 0.50],
           };
         },
       },
       day: {
-        themeColor: '#d8e8f4',
+        themeColor: '#b5d4e6',
         colorScheme: 'light',
-        canvasBg: ['#ffffff', '#e8f2fa', '#c5d9eb'],
-        distantSnowRgb: [95, 120, 150],
-        distantAlpha: [0.18, 0.42],
+        canvasBg: ['#bdd4e3', '#b5d4e6', '#94bdd4'],
+        distantSnowRgb: [255, 255, 255],
+        distantAlpha: [0.35, 0.7],
         flake: {
-          hue: [195, 215],
-          lightness: [58, 72],
-          alpha: [0.52, 0.78],
+          hue: [0, 0],
+          lightness: [96, 99],
+          alpha: [0.78, 0.96],
         },
         snowflakePalette(hue, lightness, alpha) {
           return {
-            glow: [[0, 35, 85, alpha * 0.08], [0.55, 40, 70, alpha * 0.04], [1, 45, 55, 0]],
-            body: [[0, 30, lightness, alpha * 0.18], [0.35, 40, 58, alpha * 0.28], [0.75, 45, 48, alpha * 0.42], [1, 50, 42, alpha * 0.55]],
-            core: [[0, 25, 75, alpha * 0.15], [1, 35, 55, alpha * 0.22]],
-            ring: [[0, 35, 65, alpha * 0.12], [1, 45, 50, alpha * 0.20]],
-            stroke: [hue, 42, 32, alpha * 0.72],
+            glow: [[0, 0, 0, 99, alpha * 0.14], [0.55, 0, 0, 98, alpha * 0.07], [1, 0, 0, 96, 0]],
+            body: [[0, 0, 0, lightness, alpha * 0.28], [0.35, 0, 0, 99, alpha * 0.40], [0.75, 0, 0, 98, alpha * 0.50], [1, 0, 0, 97, alpha * 0.58]],
+            core: [[0, 0, 0, 99, alpha * 0.24], [1, 0, 0, 98, alpha * 0.32]],
+            ring: [[0, 0, 0, 99, alpha * 0.20], [1, 0, 0, 97, alpha * 0.28]],
+            stroke: [0, 0, 100, alpha * 0.72],
           };
         },
       },
     };
 
-    let sceneMode = 'night';
+    let sceneMode = 'day';
 
     function getTheme() {
       return THEMES[sceneMode];
@@ -284,14 +307,11 @@
         const saved = localStorage.getItem(SCENE_MODE_KEY);
         if (saved === 'day' || saved === 'night') return saved;
       } catch (_) { /* ignore */ }
-      return 'night';
+      return 'day';
     }
 
-    function updateModeToggleUi() {
-      const isDay = sceneMode === 'day';
-      modeToggle.textContent = isDay ? 'Night' : 'Day';
-      modeToggle.setAttribute('aria-pressed', isDay ? 'true' : 'false');
-      modeToggle.setAttribute('aria-label', isDay ? 'Switch to night mode' : 'Switch to day mode');
+    function syncModeSelectUi() {
+      modeSelect.value = sceneMode;
     }
 
     function applyPageTheme() {
@@ -299,7 +319,7 @@
       document.documentElement.dataset.theme = sceneMode;
       if (themeColorMeta) themeColorMeta.content = theme.themeColor;
       if (colorSchemeMeta) colorSchemeMeta.content = theme.colorScheme;
-      updateModeToggleUi();
+      syncModeSelectUi();
     }
 
     function applyThemeColorsToConfig(config) {
@@ -967,8 +987,8 @@
       updateSpeedLabel();
     });
 
-    modeToggle.addEventListener('click', () => {
-      setSceneMode(sceneMode === 'night' ? 'day' : 'night');
+    modeSelect.addEventListener('change', () => {
+      setSceneMode(modeSelect.value);
     });
 
     updateSpeedLabel();
