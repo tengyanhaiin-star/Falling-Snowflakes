@@ -20,7 +20,7 @@ The scene layers three elements:
 
 | | **Day** (default) | **Night** |
 |---|-------------------|-----------|
-| Sky | Soft sky blue (`#87CEEB`) | Deep navy (`#060d18`) |
+| Sky | Slate blue-gray (`#707f8f`) | Deep navy (`#060d18`) |
 | Flakes | White / off-white | Light blue-white |
 | UI | Light panel, dark text | Dark panel, light text |
 
