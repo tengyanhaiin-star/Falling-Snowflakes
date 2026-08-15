@@ -96,12 +96,8 @@
     .controls {
       position: fixed;
       bottom: calc(32px + var(--ui-bottom-gap, 0px) + env(safe-area-inset-bottom, 0px));
-      left: max(12px, env(safe-area-inset-left, 0px));
-      right: max(12px, env(safe-area-inset-right, 0px));
-      width: max-content;
-      max-width: 100%;
-      margin-left: auto;
-      margin-right: auto;
+      left: 50%;
+      transform: translateX(-50%);
       z-index: 3;
       display: flex;
       flex-wrap: wrap;
@@ -109,6 +105,9 @@
       align-items: center;
       align-content: center;
       gap: 8px 12px;
+      box-sizing: border-box;
+      width: max-content;
+      max-width: calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
       padding: 8px 12px;
       background: var(--controls-bg);
       border: 1px solid var(--controls-border);
@@ -125,11 +124,10 @@
       display: none;
     }
     body.landscape-compact .controls {
-      left: max(8px, env(safe-area-inset-left, 0px));
-      right: max(8px, env(safe-area-inset-right, 0px));
       flex-wrap: nowrap;
       gap: 6px 10px;
       padding: 5px 8px;
+      max-width: calc(100vw - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
       bottom: calc(6px + var(--ui-bottom-gap, 0px) + env(safe-area-inset-bottom, 0px));
       font-size: 12px;
       border-radius: 8px;
@@ -195,8 +193,20 @@
       font-size: 12px;
     }
     @media (max-width: 600px) and (orientation: portrait) {
-      .controls .control-group:last-child input[type="range"] {
-        width: min(120px, 30vw);
+      .controls {
+        gap: 6px 8px;
+        padding: 6px 10px;
+        max-width: calc(100vw - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+      }
+      .controls .control-group {
+        gap: 6px;
+      }
+      .controls input[type="range"] {
+        width: min(108px, 26vw);
+      }
+      .controls select.mode-select {
+        padding: 4px 26px 4px 8px;
+        background-position: right 8px center;
       }
     }
   </style>
