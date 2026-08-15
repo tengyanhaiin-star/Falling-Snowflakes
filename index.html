@@ -124,14 +124,15 @@
     }
     body.landscape-compact .controls {
       flex-wrap: nowrap;
-      gap: 8px 12px;
-      padding: 6px 12px;
-      padding-left: calc(12px + env(safe-area-inset-left, 0px));
-      padding-right: calc(12px + env(safe-area-inset-right, 0px));
+      gap: 8px 10px;
+      width: max-content;
+      max-width: calc(100vw - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+      padding: 6px 10px;
+      padding-left: calc(10px + env(safe-area-inset-left, 0px));
+      padding-right: calc(10px + env(safe-area-inset-right, 0px));
       bottom: calc(6px + var(--ui-bottom-gap, 0px) + env(safe-area-inset-bottom, 0px));
       font-size: 12px;
       border-radius: 8px;
-      max-width: calc(100vw - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
     }
     body.landscape-compact .controls input[type="range"] {
       width: min(120px, 28vw);
