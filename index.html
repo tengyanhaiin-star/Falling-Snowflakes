@@ -190,6 +190,15 @@
       background-position: right 8px center;
       font-size: 12px;
     }
+    @media (max-width: 600px) and (orientation: portrait) {
+      .controls .control-group:first-child {
+        flex: 1 1 100%;
+        justify-content: center;
+      }
+      .controls .control-group:last-child input[type="range"] {
+        width: min(120px, 30vw);
+      }
+    }
   </style>
 </head>
 <body>
@@ -204,11 +213,11 @@
       <label for="speedSlider">Fall speed</label>
       <input type="range" id="speedSlider" min="4" max="20" step="1" value="10">
       <span id="speedValue">1.0×</span>
+      <select id="modeSelect" class="mode-select" aria-label="Scene mode">
+        <option value="day">Day</option>
+        <option value="night">Night</option>
+      </select>
     </div>
-    <select id="modeSelect" class="mode-select" aria-label="Scene mode">
-      <option value="day">Day</option>
-      <option value="night">Night</option>
-    </select>
   </div>
   <p class="hint">Tap the canvas to regenerate</p>
 
